@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Krishnaite | Community-Driven Software Engineering Learning Platform</title>
+  <meta name="description" content="A minimalist, premium community platform for Krishnaite software developers. Learn, collaborate, and build engineering excellence.">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Supabase JS Client CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Cache-busted stylesheet -->
+  <link rel="stylesheet" href="style.css?v=7">
+</head>
+<body>
+
+  <!-- ==================== 1. LANDING PAGE VIEW ==================== -->
+  <div id="landing-page-view" class="landing-page">
+    
+    <!-- Top Navigation Header -->
+    <header class="landing-header">
+      <div class="landing-nav-container">
+        <div class="landing-logo">
+          <svg class="logo-icon" width="30" height="30" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="100" height="100" rx="24" fill="url(#goldGrad)" />
+            <path d="M35 25V75M35 50L65 25M35 50L65 75" stroke="#FFFFFF" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+            <defs>
+              <linearGradient id="goldGrad" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#F3E5AB" />
+                <stop offset="50%" stop-color="#D4AF37" />
+                <stop offset="100%" stop-color="#AA7C11" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <span class="landing-logo-text">Krishnaite</span>
+        </div>
+
+        <nav class="landing-nav-links">
+          <a href="#features" class="landing-nav-link">Features</a>
+          <a href="#roadmaps" class="landing-nav-link">Roadmaps</a>
+          <a href="#membership" class="landing-nav-link">Membership</a>
+          <a href="#about" class="landing-nav-link">About</a>
+        </nav>
+
+        <div class="landing-auth-buttons">
+          <button class="landing-btn-login" onclick="openSignInModal()">Sign In</button>
+          <button class="landing-btn-cta" onclick="openSignInModal()">Join Community</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="landing-hero">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <i data-lucide="sparkles" style="width: 14px; height: 14px; color: var(--primary);"></i>
+          <span>A Dedicated Space for Software Engineering Excellence</span>
+        </div>
+        <h1 class="hero-title">A Calm, Minimalist Place <br>to Master Software Engineering</h1>
+        <p class="hero-subtitle">
+          Escape the noise. Consume long-form engineering guides from founders, track structured roadmaps, access boilerplates, and build your technical career without social-media distractions.
+        </p>
+        <div class="hero-actions">
+          <button class="btn-primary-large" onclick="openSignInModal()">Enter Academy <i data-lucide="arrow-right" style="width: 18px; height: 18px; display:inline-block; vertical-align:middle;"></i></button>
+          <a href="#membership" class="btn-secondary-large">Explore Tiers</a>
+        </div>
+        
+        <div class="hero-trusted-by">
+          <span>Trusted by modern builders worldwide</span>
+          <div class="trusted-logos">
+            <span>NOTION</span>
+            <span>LINEAR</span>
+            <span>APPLE STYLE</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Trust Cards Section -->
+    <section id="features" class="landing-features">
+      <div class="landing-container">
+        <h2 class="landing-section-heading">Learn by Building, Guided by Experts</h2>
+        <p class="landing-section-subheading">We focus entirely on deep engineering walkthroughs, high-quality resources, and interactive roadmaps.</p>
+
+        <div class="features-grid">
+          <div class="card feature-card">
+            <div class="feature-icon-sphere"><i data-lucide="book-open"></i></div>
+            <h3 class="feature-card-title">Founder Publications</h3>
+            <p class="feature-card-text">Access detailed technical guides on compiler construction, systems architecture, and database tuning directly from the Acharya.</p>
+          </div>
+
+          <div class="card feature-card">
+            <div class="feature-icon-sphere"><i data-lucide="map"></i></div>
+            <h3 class="feature-card-title">Structured Roadmaps</h3>
+            <p class="feature-card-text">Track your learning journey step-by-step from core foundations up to advanced backend architectures and cloud environments.</p>
+          </div>
+
+          <div class="card feature-card">
+            <div class="feature-icon-sphere"><i data-lucide="download"></i></div>
+            <h3 class="feature-card-title">Boilerplates & Guides</h3>
+            <p class="feature-card-text">Download hot-reload boilerplates, cheatsheets, vector index templates, and configuration assets to save you hours of startup code.</p>
+          </div>
+
+          <div class="card feature-card">
+            <div class="feature-icon-sphere"><i data-lucide="message-square"></i></div>
+            <h3 class="feature-card-title">Thoughtful Discussion</h3>
+            <p class="feature-card-text">Engage in threaded community comments built for clarity. Ask questions, seek code reviews, and discuss engineering principles calmly.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Roadmap Preview Section -->
+    <section id="roadmaps" class="landing-roadmaps-section">
+      <div class="landing-container">
+        <div style="text-align: center; max-width: 600px; margin: 0 auto 40px auto;">
+          <h2 class="landing-section-heading" style="margin-bottom:12px;">The Engineering Curriculum</h2>
+          <p class="landing-section-subheading">Interactive, checkpoint-driven learning roadmaps designed to take you from hobbyist to professional engineer.</p>
+        </div>
+
+        <div class="roadmap-preview-card card">
+          <div class="roadmap-preview-header">
+            <div>
+              <span class="roadmap-tag">Core Curriculum</span>
+              <h3 style="font-size: 20px; font-weight:700; margin-top: 6px;">Programming Foundations Roadmap</h3>
+            </div>
+            <div style="text-align:right;">
+              <span style="font-size:12px; font-weight:600; color: var(--text-muted);">6 Checkpoints</span>
+            </div>
+          </div>
+          
+          <div class="roadmap-preview-steps">
+            <div class="roadmap-step-dot completed">
+              <div class="dot-inner"></div>
+              <span>Variables & Scopes</span>
+            </div>
+            <div class="roadmap-step-dot completed">
+              <div class="dot-inner"></div>
+              <span>Control Loops</span>
+            </div>
+            <div class="roadmap-step-dot active">
+              <div class="dot-inner"></div>
+              <span>Functions Context</span>
+            </div>
+            <div class="roadmap-step-dot">
+              <div class="dot-inner"></div>
+              <span>Object-Oriented</span>
+            </div>
+            <div class="roadmap-step-dot">
+              <div class="dot-inner"></div>
+              <span>Data Structures</span>
+            </div>
+            <div class="roadmap-step-dot">
+              <div class="dot-inner"></div>
+              <span>Memory Heap/Stack</span>
+            </div>
+          </div>
+          
+          <div style="text-align:center; margin-top: 24px;">
+            <button class="btn-primary" onclick="openSignInModal()">Register to Access All Roadmaps</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Membership Plans Section -->
+    <section id="membership" class="landing-membership">
+      <div class="landing-container">
+        <div style="text-align: center; max-width: 600px; margin: 0 auto 50px auto;">
+          <h2 class="landing-section-heading" style="margin-bottom:12px;">Choose Your Journey</h2>
+          <p class="landing-section-subheading">Unlock the level of training, mentorship, and engineering assets that match your goals.</p>
+        </div>
+
+        <div class="membership-grid">
+          <!-- Free Plan -->
+          <div class="card pricing-card">
+            <div class="pricing-card-header">
+              <span class="pricing-tier-name">Krishnaite Free</span>
+              <div class="pricing-cost">$0<span class="price-suffix">/forever</span></div>
+              <p class="pricing-tier-desc">Get started with foundational guides, general announcements, and basic roadmap tracking.</p>
+            </div>
+            <ul class="pricing-features">
+              <li><i data-lucide="check" class="pricing-check-icon"></i> Access to Free Feed channel</li>
+              <li><i data-lucide="check" class="pricing-check-icon"></i> Interactive programming roadmaps</li>
+              <li><i data-lucide="check" class="pricing-check-icon"></i> Threaded comments in Free feed</li>
+              <li><i data-lucide="check" class="pricing-check-icon"></i> Basic developer cheat sheets</li>
+            </ul>
+            <button class="pricing-cta-btn" onclick="openSignInModal('free')">Get Started Free</button>
+          </div>
+
+          <!-- Explorer Plan -->
+          <div class="card pricing-card highlighted">
+            <div class="pricing-card-header">
+              <div class="pricing-badge">RECOMMENDED</div>
+              <span class="pricing-tier-name">Karma Explorer</span>
+              <div class="pricing-cost">$7 <span class="price-currency" style="font-size: 16px; font-weight: normal; color: var(--text-secondary);">/ ₹674.60</span><span class="price-suffix">/month</span></div>
+              <p class="pricing-tier-desc">Perfect for intermediate developers building dynamic web systems and writing parsers.</p>
+            </div>
+            <ul class="pricing-features">
+              <li><i data-lucide="check" class="pricing-check-icon"></i> Access to Explorer Community channel</li>
+              <li><i data-lucide="check" class="pricing-check-icon"></i> Complete project boilerplate files</li>
+              <li><i data-lucide="check" class="pricing-check-icon"></i> In-depth Markdown parser compiler tutorials</li>
+              <li><i data-lucide="check" class="pricing-check-icon"></i> Standard member profile tag</li>
+            </ul>
+            <button class="pricing-cta-btn btn-primary" onclick="openSignInModal('explorer')">Unlock Explorer</button>
+          </div>
+
+          <!-- Pro Plan -->
+          <div class="card pricing-card">
+            <div class="pricing-card-header">
+              <span class="pricing-tier-name">KrishtaKarma Pro</span>
+              <div class="pricing-cost">$18 <span class="price-currency" style="font-size: 16px; font-weight: normal; color: var(--text-secondary);">/ ₹1734.69</span><span class="price-suffix">/month</span></div>
+              <p class="pricing-tier-desc">For professionals seeking mastery in systems architecture, concurrency systems, and career scaling.</p>
+            </div>
+            <ul class="pricing-features">
+              <li><i data-lucide="check" class="pricing-check-icon"></i> Access to Pro Portal & Live sessions</li>
+              <li><i data-lucide="check" class="pricing-check-icon"></i> Rust concurrency & Go Goroutine deep-dives</li>
+              <li><i data-lucide="check" class="pricing-check-icon"></i> Custom Vector Index templates</li>
+              <li><i data-lucide="check" class="pricing-check-icon"></i> Priority answers & code reviews</li>
+            </ul>
+            <button class="pricing-cta-btn" onclick="openSignInModal('pro')">Become Pro Builder</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- About / Acharya Section -->
+    <section id="about" class="landing-about">
+      <div class="landing-container">
+        <div class="about-card card">
+          <div class="about-image-side" style="background-image: url('assets/founder.png'); background-position: center; background-size: cover;"></div>
+          <div class="about-info-side">
+            <span class="about-subtitle">ABOUT THE FOUNDER</span>
+            <h2 class="about-title">Why I Built Krishnaite Academy</h2>
+            <p class="about-text">
+              "Modern social-media platforms and video portals are built to hijack attention. Infinite feeds, algorithmic triggers, and shallow soundbites are poisonous to real learning.
+            </p>
+            <p class="about-text">
+              I built Krishnaite as a sanctuary for builders. A minimalist, distraction-free harbor where long-form technical guides are valued, where we study actual source code, and where engineering is treated with the focus, devotion, and calm it deserves."
+            </p>
+            <div class="about-signature">
+              <strong>Acharya / Founder</strong>
+              <span>Lead Systems Architect</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Beautiful Landing Footer -->
+    <footer class="landing-footer">
+      <div class="landing-container">
+        <div class="footer-top">
+          <div class="footer-brand">
+            <div class="landing-logo">
+              <svg class="logo-icon" width="22" height="22" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="100" height="100" rx="24" fill="url(#goldGradFooter)" />
+                <path d="M35 25V75M35 50L65 25M35 50L65 75" stroke="#FFFFFF" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+                <defs>
+                  <linearGradient id="goldGradFooter" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#F3E5AB" />
+                    <stop offset="50%" stop-color="#D4AF37" />
+                    <stop offset="100%" stop-color="#AA7C11" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <span class="landing-logo-text" style="font-size:16px;">Krishnaite</span>
+            </div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-top: 10px; max-width: 250px;">A calm, premium sanctuary for software builders.</p>
+          </div>
+          
+          <div class="footer-links-col">
+            <h4>Explore</h4>
+            <a href="#features">Features</a>
+            <a href="#roadmaps">Curriculum</a>
+            <a href="#membership">Tiers</a>
+          </div>
+
+          <div class="footer-links-col">
+            <h4>Company</h4>
+            <a href="#about">About Acharya</a>
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Use</a>
+          </div>
+        </div>
+
+        <div class="footer-bottom">
+          <p>© 2026 Krishnaite Academy. All rights reserved. Built with devotion and Zen layout engineering.</p>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- ==================== SIGN IN / SIGN UP DIALOG MODAL ==================== -->
+  <div class="signin-modal-overlay hidden" id="signin-modal">
+    <div class="card signin-modal-card" style="max-width: 400px; padding: 32px;">
+      <button class="signin-close-btn" onclick="closeSignInModal()" aria-label="Close dialog" style="top: 24px; right: 24px;">
+        <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+      </button>
+
+      <div style="text-align: center; margin-bottom: 24px;">
+        <svg class="logo-icon" width="40" height="40" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin: 0 auto 12px; display: block;">
+          <rect width="100" height="100" rx="24" fill="url(#goldGrad)" />
+          <path d="M35 25V75M35 50L65 25M35 50L65 75" stroke="#FFFFFF" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <h3 class="signin-title" id="auth-title" style="font-size: 24px; margin-bottom: 4px;">Sign In to Krishnaite</h3>
+        <p class="signin-subtitle" id="auth-subtitle" style="font-size: 13px; color: var(--text-muted);">Enter your developer credentials to access the academy.</p>
+      </div>
+
+      <form id="signin-form" onsubmit="handleAuthSubmit(event)" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
+          <label class="form-label" style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Email Address</label>
+          <input type="email" id="auth-email" required placeholder="name@domain.com" class="form-input" style="padding: 10px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); outline: none; font-size: 14px; transition: var(--transition);">
+        </div>
+
+        <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
+          <label class="form-label" style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Password</label>
+          <input type="password" id="auth-password" required placeholder="••••••••" class="form-input" style="padding: 10px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); outline: none; font-size: 14px; transition: var(--transition);">
+        </div>
+
+        <div id="auth-error" class="hidden" style="color: var(--danger); font-size: 12px; font-weight: 500; text-align: center; line-height: 1.4;"></div>
+
+        <button type="submit" id="auth-submit-btn" class="btn-primary" style="padding: 12px; border-radius: var(--radius-sm); font-weight: 700; margin-top: 8px;">
+          Sign In
+        </button>
+
+        <div style="text-align: center; margin-top: 10px; font-size: 13px; color: var(--text-secondary);">
+          <span id="auth-switch-label">Don't have an account?</span>
+          <a href="#" id="auth-switch-link" onclick="toggleAuthMode(event)" style="color: var(--primary); font-weight: 600; text-decoration: none; margin-left: 4px;">Sign Up</a>
+        </div>
+      </form>
+
+      <div style="font-size:11px; text-align:center; color: var(--text-muted); border-top:1px solid var(--border); padding-top:16px; margin-top:20px; line-height: 1.5;">
+        Use <strong>founder@krishnaite.dev</strong> &amp; <strong>Kr!5hn@H</strong> for Founder admin views.
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Simple Script to handle Landing Modal & Redirects -->
+  <script>
+    const supabaseUrl = "https://jllutbamogrndaqexktk.supabase.co";
+    const supabaseKey = "sb_publishable_yjUbGDQcuxsomXpwoJ7jpQ_W03qyL4t";
+    const client = supabase.createClient(supabaseUrl, supabaseKey);
+
+    let authMode = "signin";
+
+    // On load check
+    document.addEventListener("DOMContentLoaded", async () => {
+      const { data: { session } } = await client.auth.getSession();
+      if (session) {
+        localStorage.setItem("userLoggedIn", "true");
+        window.location.href = "dashboard.html";
+      } else {
+        localStorage.removeItem("userLoggedIn");
+      }
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
+    });
+
+    const signInModal = document.getElementById("signin-modal");
+    const authError = document.getElementById("auth-error");
+    const authTitle = document.getElementById("auth-title");
+    const authSubtitle = document.getElementById("auth-subtitle");
+    const authSubmitBtn = document.getElementById("auth-submit-btn");
+    const authSwitchLabel = document.getElementById("auth-switch-label");
+    const authSwitchLink = document.getElementById("auth-switch-link");
+
+    function openSignInModal(preselectTier = "") {
+      signInModal.classList.remove("hidden");
+      setAuthMode("signin");
+      document.getElementById("auth-email").value = "";
+      document.getElementById("auth-password").value = "";
+      authError.classList.add("hidden");
+    }
+
+    function closeSignInModal() {
+      signInModal.classList.add("hidden");
+    }
+
+    function toggleAuthMode(e) {
+      e.preventDefault();
+      setAuthMode(authMode === "signin" ? "signup" : "signin");
+    }
+
+    function setAuthMode(mode) {
+      authMode = mode;
+      authError.classList.add("hidden");
+      if (mode === "signin") {
+        authTitle.textContent = "Sign In to Krishnaite";
+        authSubtitle.textContent = "Enter your developer credentials to access the academy.";
+        authSubmitBtn.textContent = "Sign In";
+        authSwitchLabel.textContent = "Don't have an account?";
+        authSwitchLink.textContent = "Sign Up";
+      } else {
+        authTitle.textContent = "Create Your Account";
+        authSubtitle.textContent = "Join the sanctuary for software builders.";
+        authSubmitBtn.textContent = "Sign Up";
+        authSwitchLabel.textContent = "Already have an account?";
+        authSwitchLink.textContent = "Sign In";
+      }
+    }
+
+    async function handleAuthSubmit(e) {
+      e.preventDefault();
+      authError.classList.add("hidden");
+      
+      const email = document.getElementById("auth-email").value.trim().toLowerCase();
+      const password = document.getElementById("auth-password").value;
+
+      if (authMode === "signup") {
+        authSubmitBtn.disabled = true;
+        authSubmitBtn.textContent = "Creating Account...";
+        const { data, error } = await client.auth.signUp({ email, password });
+        authSubmitBtn.disabled = false;
+        authSubmitBtn.textContent = "Sign Up";
+
+        if (error) {
+          authError.textContent = error.message;
+          authError.classList.remove("hidden");
+          return;
+        }
+
+        // Auto sign-in or check if email confirmation is required
+        if (data.session) {
+          authMode = "signin";
+          handleAuthSuccess(email);
+        } else {
+          alert("Sign up successful! Please check your email for the confirmation link, then Sign In.");
+          setAuthMode("signin");
+        }
+      } else {
+        authSubmitBtn.disabled = true;
+        authSubmitBtn.textContent = "Signing In...";
+        const { data, error } = await client.auth.signInWithPassword({ email, password });
+        authSubmitBtn.disabled = false;
+        authSubmitBtn.textContent = "Sign In";
+
+        if (error) {
+          authError.textContent = error.message;
+          authError.classList.remove("hidden");
+          return;
+        }
+
+        handleAuthSuccess(email);
+      }
+    }
+
+    function handleAuthSuccess(email) {
+      localStorage.setItem("userLoggedIn", "true");
+      let role = (email === "founder@krishnaite.dev") ? "founder" : "free";
+
+      const stored = localStorage.getItem("krishnaite_state");
+      let state = {};
+      if (stored) {
+        try { state = JSON.parse(stored); } catch(err) {}
+      }
+      state.currentUserRole = role;
+      state.userLoggedIn = true;
+      state.activeView = "dashboard";
+      localStorage.setItem("krishnaite_state", JSON.stringify(state));
+      
+      closeSignInModal();
+      window.location.href = "dashboard.html";
+    }
+  </script>
+</body>
+</html>

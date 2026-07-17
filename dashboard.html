@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Krishnaite | Dashboard</title>
+  <meta name="description" content="Your personal dashboard on the Krishnaite community platform.">
+
+  <!-- Supabase JS Client CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Login Guard: redirect to landing if not authenticated -->
+  <script>
+    if (localStorage.getItem("userLoggedIn") !== "true") {
+      window.location.replace("index.html");
+    }
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css?v=7">
+</head>
+<body>
+
+  <!-- ===== DASHBOARD APP ===== -->
+  <div class="app-container" id="main-app-container">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="app-sidebar">
+      <div class="sidebar-logo">
+        <svg class="logo-icon" width="26" height="26" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="100" height="100" rx="24" fill="url(#gSB)"/>
+          <path d="M35 25V75M35 50L65 25M35 50L65 75" stroke="#FFF" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+          <defs>
+            <linearGradient id="gSB" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#F3E5AB"/>
+              <stop offset="50%" stop-color="#D4AF37"/>
+              <stop offset="100%" stop-color="#AA7C11"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span class="logo-text">Krishnaite</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="sidebar-nav-item active" data-view="dashboard">
+          <i data-lucide="layout-dashboard"></i>
+          <span>Dashboard</span>
+        </div>
+
+        <div class="nav-section-title">Communities</div>
+
+        <div class="sidebar-nav-item" data-view="comm-free">
+          <div class="comm-icon-sphere comm-icon-free" style="width:16px;height:16px;font-size:9px;border-radius:4px;margin-right:4px;">F</div>
+          <span>Krishnaite Free</span>
+        </div>
+
+        <div class="sidebar-nav-item" data-view="comm-explorer">
+          <div class="comm-icon-sphere comm-icon-explorer" style="width:16px;height:16px;font-size:9px;border-radius:4px;margin-right:4px;">E</div>
+          <span>Karma Explorer</span>
+          <i data-lucide="lock" class="nav-lock-icon hidden" id="sidebar-lock-explorer"></i>
+        </div>
+
+        <div class="sidebar-nav-item" data-view="comm-pro">
+          <div class="comm-icon-sphere comm-icon-pro" style="width:16px;height:16px;font-size:9px;border-radius:4px;margin-right:4px;">P</div>
+          <span>KrishtaKarma Pro</span>
+          <i data-lucide="lock" class="nav-lock-icon hidden" id="sidebar-lock-pro"></i>
+        </div>
+
+        <div class="nav-section-title">Learning</div>
+
+        <div class="sidebar-nav-item" data-view="roadmaps">
+          <i data-lucide="map"></i>
+          <span>Roadmaps</span>
+        </div>
+
+        <div class="sidebar-nav-item" data-view="resources">
+          <i data-lucide="folder"></i>
+          <span>Resources</span>
+        </div>
+
+        <div class="sidebar-nav-item" data-view="assets">
+          <i data-lucide="package"></i>
+          <span>Assets</span>
+        </div>
+
+        <div class="nav-section-title">Personal</div>
+
+        <div class="sidebar-nav-item" data-view="notifications">
+          <i data-lucide="bell"></i>
+          <span>Notifications</span>
+        </div>
+
+        <div class="sidebar-nav-item" data-view="profile">
+          <i data-lucide="user"></i>
+          <span>Profile</span>
+        </div>
+
+        <div class="sidebar-nav-item" onclick="logout()" style="margin-top:auto;color:var(--danger);">
+          <i data-lucide="log-out"></i>
+          <span>Sign Out</span>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer" id="sidebar-user-card"></div>
+    </aside>
+
+    <!-- Main content -->
+    <div class="main-wrapper">
+
+      <!-- Header -->
+      <header class="app-header">
+        <div class="header-left">
+          <button class="menu-toggle-btn" id="sidebar-toggle" aria-label="Toggle Sidebar">
+            <i data-lucide="menu" style="width:20px;height:20px;"></i>
+          </button>
+          <div class="search-container">
+            <i data-lucide="search" class="search-icon"></i>
+            <input type="text" placeholder="Search articles, roadmaps, resources..." class="search-input" id="global-search">
+          </div>
+        </div>
+        <div class="header-right">
+          <button class="bell-btn" onclick="navigateToView('notifications')" aria-label="Notifications">
+            <i data-lucide="bell" style="width:18px;height:18px;"></i>
+            <span class="bell-badge hidden" id="header-bell-badge"></span>
+          </button>
+          <button class="create-post-header-btn hidden" id="header-create-post-btn">
+            <i data-lucide="plus" style="width:16px;height:16px;"></i>
+            <span>Write Article</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Rendered view -->
+      <main class="content-view" id="main-view-content"></main>
+    </div>
+  </div>
+
+
+  <!-- ===== ARTICLE EDITOR ===== -->
+  <div class="editor-view hidden" id="editor-view">
+
+    <header class="editor-header">
+      <div class="editor-header-left">
+        <button class="btn-secondary" id="editor-back-btn" style="padding:6px 12px;">
+          <i data-lucide="arrow-left" style="width:14px;height:14px;vertical-align:middle;"></i> Dashboard
+        </button>
+        <span class="editor-save-status" id="editor-save-status">Draft saved</span>
+      </div>
+      <div class="editor-header-right">
+        <button class="btn-secondary" id="editor-settings-btn" style="padding:8px 16px;display:flex;align-items:center;gap:6px;">
+          <i data-lucide="settings" style="width:14px;height:14px;"></i> Settings
+        </button>
+        <button class="btn-secondary" id="editor-draft-btn" style="padding:8px 16px;">Save Draft</button>
+        <button class="btn-primary" id="editor-publish-btn" style="padding:8px 20px;">Publish</button>
+      </div>
+    </header>
+
+    <!-- Settings panel -->
+    <div class="editor-settings-sidebar" id="editor-settings-sidebar">
+      <div class="settings-sidebar-header">
+        <h4>Article Configuration</h4>
+        <button class="settings-close-btn" id="editor-settings-close-btn">
+          <i data-lucide="x" style="width:18px;height:18px;"></i>
+        </button>
+      </div>
+      <div class="settings-sidebar-body">
+        <input type="hidden" id="editor-post-id">
+
+        <div class="form-group">
+          <label class="form-label">Target Community</label>
+          <select class="form-input" id="editor-community-select">
+            <option value="free">Krishnaite Free Feed</option>
+            <option value="explorer">Karma Explorer Feed</option>
+            <option value="pro">KrishtaKarma Pro Portal</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Brief Excerpt</label>
+          <textarea class="form-input" id="editor-excerpt-input" rows="3" placeholder="Brief summary displayed in feed..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Tags (comma separated)</label>
+          <input type="text" class="form-input" id="editor-tags-input" placeholder="e.g. rust, systems design">
+        </div>
+
+        <div class="form-group" style="flex-direction:row;align-items:center;gap:8px;">
+          <input type="checkbox" id="editor-pinned-checkbox" style="width:16px;height:16px;accent-color:var(--primary);">
+          <label for="editor-pinned-checkbox" style="font-size:13px;font-weight:500;">Pin to Feed</label>
+        </div>
+
+        <div class="form-group" style="flex-direction:row;align-items:center;gap:8px;">
+          <input type="checkbox" id="editor-comments-checkbox" checked style="width:16px;height:16px;accent-color:var(--primary);">
+          <label for="editor-comments-checkbox" style="font-size:13px;font-weight:500;">Enable Comments</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Canvas -->
+    <div class="editor-scroll-container">
+      <div class="editor-canvas">
+
+        <div class="editor-cover-wrapper">
+          <div class="editor-cover-image" id="editor-cover-image">
+            <div class="editor-cover-placeholder" id="editor-cover-placeholder">
+              <i data-lucide="image" style="width:32px;height:32px;"></i>
+              <span>Add a cover image URL</span>
+            </div>
+          </div>
+          <div class="editor-cover-controls">
+            <input type="url" class="form-input" id="editor-cover-url-input" placeholder="Paste Cover Image URL..." style="flex:1;max-width:400px;padding:6px 12px;font-size:12px;">
+            <button class="btn-secondary" id="editor-cover-remove" style="padding:6px 12px;font-size:12px;">Remove</button>
+            <div class="cover-reposition-slider-box hidden" id="cover-slider-box">
+              <span style="font-size:11px;color:var(--text-secondary);font-weight:600;">Reposition Y:</span>
+              <input type="range" id="cover-reposition-slider" min="0" max="100" value="50" style="width:80px;accent-color:var(--primary);">
+            </div>
+          </div>
+        </div>
+
+        <div class="editor-title-container">
+          <textarea class="editor-title-input" id="editor-title-input" placeholder="Untitled Article" rows="1"></textarea>
+        </div>
+
+        <div class="editor-body-canvas" id="editor-body-input" contenteditable="true" placeholder="Press '/' for commands, or start writing..."></div>
+      </div>
+    </div>
+
+    <!-- Floating toolbar -->
+    <div class="floating-toolbar hidden" id="floating-toolbar">
+      <select class="toolbar-select" id="tb-heading">
+        <option value="p">Paragraph</option>
+        <option value="h1">Heading 1</option>
+        <option value="h2">Heading 2</option>
+        <option value="h3">Heading 3</option>
+      </select>
+      <div class="toolbar-divider"></div>
+      <button class="toolbar-btn" id="tb-bold" title="Bold"><i data-lucide="bold"></i></button>
+      <button class="toolbar-btn" id="tb-italic" title="Italic"><i data-lucide="italic"></i></button>
+      <button class="toolbar-btn" id="tb-underline" title="Underline"><i data-lucide="underline"></i></button>
+      <button class="toolbar-btn" id="tb-strike" title="Strikethrough"><i data-lucide="strikethrough"></i></button>
+      <div class="toolbar-divider"></div>
+      <button class="toolbar-btn" id="tb-color" title="Color"><i data-lucide="palette"></i></button>
+      <button class="toolbar-btn" id="tb-highlight" title="Highlight"><i data-lucide="highlighter"></i></button>
+      <div class="toolbar-divider"></div>
+      <button class="toolbar-btn" id="tb-list-bullet" title="Bullet List"><i data-lucide="list"></i></button>
+      <button class="toolbar-btn" id="tb-list-num" title="Numbered List"><i data-lucide="list-ordered"></i></button>
+      <button class="toolbar-btn" id="tb-quote" title="Blockquote"><i data-lucide="quote"></i></button>
+      <button class="toolbar-btn" id="tb-code-block" title="Code"><i data-lucide="code"></i></button>
+      <div class="toolbar-divider"></div>
+      <button class="toolbar-btn" id="tb-link" title="Link"><i data-lucide="link"></i></button>
+      <button class="toolbar-btn" id="tb-image" title="Image"><i data-lucide="image"></i></button>
+      <button class="toolbar-btn" id="tb-table" title="Table"><i data-lucide="table"></i></button>
+      <button class="toolbar-btn" id="tb-emoji" title="Emoji" style="font-size:16px;">😀</button>
+    </div>
+
+    <!-- Slash menu -->
+    <div class="slash-menu hidden" id="slash-menu">
+      <div class="slash-menu-item" data-command="h1"><i data-lucide="heading-1"></i><div><span class="slash-item-title">Heading 1</span><span class="slash-item-desc">Large section heading</span></div></div>
+      <div class="slash-menu-item" data-command="h2"><i data-lucide="heading-2"></i><div><span class="slash-item-title">Heading 2</span><span class="slash-item-desc">Medium section heading</span></div></div>
+      <div class="slash-menu-item" data-command="h3"><i data-lucide="heading-3"></i><div><span class="slash-item-title">Heading 3</span><span class="slash-item-desc">Small section heading</span></div></div>
+      <div class="slash-menu-item" data-command="bullet"><i data-lucide="list"></i><div><span class="slash-item-title">Bullet List</span><span class="slash-item-desc">Unordered list</span></div></div>
+      <div class="slash-menu-item" data-command="number"><i data-lucide="list-ordered"></i><div><span class="slash-item-title">Numbered List</span><span class="slash-item-desc">Ordered list</span></div></div>
+      <div class="slash-menu-item" data-command="checklist"><i data-lucide="check-square"></i><div><span class="slash-item-title">Checklist</span><span class="slash-item-desc">Interactive tasks</span></div></div>
+      <div class="slash-menu-item" data-command="quote"><i data-lucide="quote"></i><div><span class="slash-item-title">Blockquote</span><span class="slash-item-desc">Styled quote block</span></div></div>
+      <div class="slash-menu-item" data-command="code"><i data-lucide="code"></i><div><span class="slash-item-title">Code Block</span><span class="slash-item-desc">Syntax highlighted block</span></div></div>
+      <div class="slash-menu-item" data-command="divider"><i data-lucide="minus"></i><div><span class="slash-item-title">Divider</span><span class="slash-item-desc">Horizontal line</span></div></div>
+      <div class="slash-menu-item" data-command="callout"><i data-lucide="info"></i><div><span class="slash-item-title">Callout Box</span><span class="slash-item-desc">Notice highlight</span></div></div>
+      <div class="slash-menu-item" data-command="table"><i data-lucide="table"></i><div><span class="slash-item-title">Table</span><span class="slash-item-desc">Data grid</span></div></div>
+      <div class="slash-menu-item" data-command="video"><i data-lucide="video"></i><div><span class="slash-item-title">Video Embed</span><span class="slash-item-desc">YouTube or direct link</span></div></div>
+    </div>
+  </div>
+
+
+  <!-- ===== FOUNDER CREATOR MODALS ===== -->
+  <!-- 1. Roadmap Modal -->
+  <div class="signin-modal-overlay hidden" id="founder-roadmap-modal" style="z-index: 2000;">
+    <div class="card signin-modal-card" style="max-width: 500px; padding: 28px; width: 90%;">
+      <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 4px; font-family: 'Outfit', sans-serif;">Create Learning Roadmap</h3>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">Structured step-by-step checklist creator for the academy.</p>
+      
+      <form id="founder-roadmap-form" onsubmit="submitFounderRoadmap(event)" style="display:flex; flex-direction:column; gap:14px;">
+        <div class="form-group" style="display:flex; flex-direction:column; gap:4px;">
+          <label style="font-size:12px; font-weight:600;">Roadmap Title</label>
+          <input type="text" id="rm-title" required placeholder="e.g. Systems Design Foundations" class="form-input" style="padding:8px 12px; font-size:13px; border:1px solid var(--border); border-radius:var(--radius-sm); outline:none;">
+        </div>
+        <div class="form-group" style="display:flex; flex-direction:column; gap:4px;">
+          <label style="font-size:12px; font-weight:600;">Description</label>
+          <textarea id="rm-desc" placeholder="Brief details about the roadmap..." rows="2" class="form-input" style="padding:8px 12px; font-size:13px; border:1px solid var(--border); border-radius:var(--radius-sm); outline:none; resize:none;"></textarea>
+        </div>
+        <div class="form-row" style="display:flex; gap:12px; flex-wrap:wrap;">
+          <div class="form-group" style="flex:1; min-width:120px; display:flex; flex-direction:column; gap:4px;">
+            <label style="font-size:12px; font-weight:600;">Difficulty</label>
+            <select id="rm-difficulty" class="form-input" style="padding:8px 12px; font-size:13px; border:1px solid var(--border); border-radius:var(--radius-sm);">
+              <option value="Beginner">Beginner</option>
+              <option value="Intermediate">Intermediate</option>
+              <option value="Advanced">Advanced</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex:1; min-width:120px; display:flex; flex-direction:column; gap:4px;">
+            <label style="font-size:12px; font-weight:600;">Est. Time</label>
+            <input type="text" id="rm-duration" required placeholder="e.g. 5 Weeks" class="form-input" style="padding:8px 12px; font-size:13px; border:1px solid var(--border); border-radius:var(--radius-sm);">
+          </div>
+          <div class="form-group" style="flex:1; min-width:120px; display:flex; flex-direction:column; gap:4px;">
+            <label style="font-size:12px; font-weight:600;">Visibility</label>
+            <select id="rm-visibility" class="form-input" style="padding:8px 12px; font-size:13px; border:1px solid var(--border); border-radius:var(--radius-sm);">
+              <option value="free">Free Tier</option>
+              <option value="explorer">Explorer Tier</option>
+              <option value="pro">Pro Tier</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="display:flex; flex-direction:column; gap:4px;">
+          <label style="font-size:12px; font-weight:600;">Checkpoints (Comma or line separated)</label>
+          <textarea id="rm-topics" required placeholder="e.g. Install Go, Hello World, Basic Syntax, Control Flows" rows="3" class="form-input" style="padding:8px 12px; font-size:13px; border:1px solid var(--border); border-radius:var(--radius-sm); outline:none; resize:none;"></textarea>
+        </div>
+        
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px;">
+          <button type="button" class="btn-secondary" onclick="closeFounderModal('roadmap')" style="padding:8px 16px;">Cancel</button>
+          <button type="submit" class="btn-primary" id="rm-submit-btn" style="padding:8px 20px;">Publish Roadmap</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. Resource Modal -->
+  <div class="signin-modal-overlay hidden" id="founder-resource-modal" style="z-index: 2000;">
+    <div class="card signin-modal-card" style="max-width: 500px; padding: 28px; width: 90%;">
+      <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 4px; font-family: 'Outfit', sans-serif;">Add Resource</h3>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">Upload documents, starter kits, or link external resources.</p>
+      
+      <form id="founder-resource-form" onsubmit="submitFounderResource(event)" style="display:flex; flex-direction:column; gap:14px;">
+        <div class="form-group" style="display:flex; flex-direction:column; gap:4px;">
+          <label style="font-size:12px; font-weight:600;">Resource Title</label>
+          <input type="text" id="res-title" required placeholder="e.g. React Architecture Cheatsheet" class="form-input" style="padding:8px 12px; font-size:13px; border:1px solid var(--border); border-radius:var(--radius-sm);">
+        </div>
+        <div class="form-group" style="display:flex; flex-direction:column; gap:4px;">
+          <label style="font-size:12px; font-weight:600;">Description</label>
+          <textarea id="res-desc" placeholder="Brief outline of contents..." rows="2" class="form-input" style="padding:8px 12px; font-size:13px; border:1px solid var(--border); border-radius:var(--radius-sm); outline:none; resize:none;"></textarea>
+        </div>
+        <div class="form-row" style="display:flex; gap:12px; flex-wrap:wrap;">
+          <div class="form-group" style="flex:1; min-width:120px; display:flex; flex-direction:column; gap:4px;">
+            <label style="font-size:12px; font-weight:600;">Category</label>
+            <select id="res-category" class="form-input" style="padding:8px 12px; font-size:13px; border:1px solid var(--border); border-radius:var(--radius-sm);">
+              <option value="Templates">Templates</option>
+              <option value="Cheat Sheets">Cheat Sheets</option>
+              <option value="Programming Guides">Programming Guides</option>
+              <option value="Wallpapers">Wallpapers</option>
+              <option value="AI Resources">AI Resources</option>
+              <option value="Downloads">Downloads</option>
+              <option value="Open Source Resources">Open Source Resources</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex:1; min-width:120px; display:flex; flex-direction:column; gap:4px;">
+            <label style="font-size:12px; font-weight:600;">Visibility</label>
+            <select id="res-visibility" class="form-input" style="padding:8px 12px; font-size:13px; border:1px solid var(--border); border-radius:var(--radius-sm);">
+              <option value="free">Free Tier</option>
+              <option value="explorer">Explorer Tier</option>
+              <option value="pro">Pro Tier</option>
+            </select>
+          </div>
+        </div>
+        
+        <div style="display:flex; flex-direction:column; gap:12px; padding:12px; background:var(--bg-secondary); border-radius:var(--radius-sm); border:1px dashed var(--border);">
+          <div class="form-group" style="display:flex; flex-direction:column; gap:4px;">
+            <label style="font-size:12px; font-weight:600;">Resource File (PDF, ZIP, RAR, PNG, JPG, WEBP, SVG, DOCX, PPTX, XLSX, TXT)</label>
+            <input type="file" id="res-file" class="form-input" style="font-size:13px;" onchange="document.getElementById('res-url-group').style.opacity = this.files.length ? '0.4' : '1.0'">
+          </div>
+          <div style="text-align:center; font-size:11px; font-weight:600; color:var(--text-muted);">— OR EXTERNAL LINK —</div>
+          <div class="form-group" id="res-url-group" style="display:flex; flex-direction:column; gap:4px; transition:opacity 0.2s;">
+            <label style="font-size:12px; font-weight:600;">External Link URL</label>
+            <input type="url" id="res-external" placeholder="https://example.com/external-resource" class="form-input" style="padding:8px 12px; font-size:13px; border:1px solid var(--border); border-radius:var(--radius-sm);">
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px;">
+          <button type="button" class="btn-secondary" onclick="closeFounderModal('resource')" style="padding:8px 16px;">Cancel</button>
+          <button type="submit" class="btn-primary" id="res-submit-btn" style="padding:8px 20px;">Upload Resource</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. Asset Modal -->
+  <div class="signin-modal-overlay hidden" id="founder-asset-modal" style="z-index: 2000;">
+    <div class="card signin-modal-card" style="max-width: 500px; padding: 28px; width: 90%;">
+      <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 4px; font-family: 'Outfit', sans-serif;">Upload Design Asset</h3>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">Add premium wallpapers, UI kits, templates, or branding assets.</p>
+      
+      <form id="founder-asset-form" onsubmit="submitFounderAsset(event)" style="display:flex; flex-direction:column; gap:14px;">
+        <div class="form-group" style="display:flex; flex-direction:column; gap:4px;">
+          <label style="font-size:12px; font-weight:600;">Asset Title</label>
+          <input type="text" id="asset-title-input" required placeholder="e.g. Zen Mode Minimal Wallpapers" class="form-input" style="padding:8px 12px; font-size:13px; border:1px solid var(--border); border-radius:var(--radius-sm);">
+        </div>
+        <div class="form-group" style="display:flex; flex-direction:column; gap:4px;">
+          <label style="font-size:12px; font-weight:600;">Description</label>
+          <textarea id="asset-desc" placeholder="Details about dimensions, format, or usage..." rows="2" class="form-input" style="padding:8px 12px; font-size:13px; border:1px solid var(--border); border-radius:var(--radius-sm); outline:none; resize:none;"></textarea>
+        </div>
+        <div class="form-row" style="display:flex; gap:12px; flex-wrap:wrap;">
+          <div class="form-group" style="flex:1; min-width:120px; display:flex; flex-direction:column; gap:4px;">
+            <label style="font-size:12px; font-weight:600;">Category</label>
+            <select id="asset-category" class="form-input" style="padding:8px 12px; font-size:13px; border:1px solid var(--border); border-radius:var(--radius-sm);">
+              <option value="Desktop Wallpapers">Desktop Wallpapers</option>
+              <option value="Mobile Wallpapers">Mobile Wallpapers</option>
+              <option value="Tablet Wallpapers">Tablet Wallpapers</option>
+              <option value="Icons">Icons</option>
+              <option value="Templates">Templates</option>
+              <option value="Brand Assets">Brand Assets</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex:1; min-width:120px; display:flex; flex-direction:column; gap:4px;">
+            <label style="font-size:12px; font-weight:600;">Visibility</label>
+            <select id="asset-visibility" class="form-input" style="padding:8px 12px; font-size:13px; border:1px solid var(--border); border-radius:var(--radius-sm);">
+              <option value="free">Free Tier</option>
+              <option value="explorer">Explorer Tier</option>
+              <option value="pro">Pro Tier</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex:1; min-width:120px; display:flex; flex-direction:column; gap:4px;">
+            <label style="font-size:12px; font-weight:600;">Version</label>
+            <input type="text" id="asset-version" placeholder="1.0.0" class="form-input" style="padding:8px 12px; font-size:13px; border:1px solid var(--border); border-radius:var(--radius-sm);">
+          </div>
+        </div>
+        
+        <div class="form-group" style="display:flex; flex-direction:column; gap:4px;">
+          <label style="font-size:12px; font-weight:600;">Preview/Thumbnail Image (URL or Unsplash)</label>
+          <input type="url" id="asset-preview" placeholder="https://images.unsplash.com/..." class="form-input" style="padding:8px 12px; font-size:13px; border:1px solid var(--border); border-radius:var(--radius-sm);">
+        </div>
+        <div class="form-group" style="display:flex; flex-direction:column; gap:4px; padding:12px; background:var(--bg-secondary); border-radius:var(--radius-sm); border:1px dashed var(--border);">
+          <label style="font-size:12px; font-weight:600;">Asset File (Direct Upload)</label>
+          <input type="file" id="asset-file" required class="form-input" style="font-size:13px;">
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px;">
+          <button type="button" class="btn-secondary" onclick="closeFounderModal('asset')" style="padding:8px 16px;">Cancel</button>
+          <button type="submit" class="btn-primary" id="asset-submit-btn" style="padding:8px 20px;">Upload Asset</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <script src="editor.js?v=7" defer></script>
+  <script src="app.js?v=7" defer></script>
+</body>
+</html>

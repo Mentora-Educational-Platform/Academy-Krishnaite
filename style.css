@@ -983,8 +983,8 @@ img { display: block; max-width: 100%; }
   color: var(--text-secondary);
   flex-shrink: 0;
 }
-.learning-details { flex: 1; }
-.learning-title { font-size: 13.5px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
+.learning-details { flex: 1; min-width: 0; }
+.learning-title { font-size: 13.5px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .learning-progress-track {
   height: 4px;
   background: var(--border);
@@ -2268,5 +2268,41 @@ input, select, textarea {
   padding: 4px 10px;
   background: var(--bg-hover);
   border-radius: var(--radius-sm);
+}
+
+/* ── Notch and Orientation Support ── */
+body, .landing-header, .mobile-drawer, .app-container {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* ── Micro Screens (Compact/Older models <360px) ── */
+@media (max-width: 359px) {
+  body {
+    font-size: 14px;
+  }
+  .landing-hero {
+    padding: 60px 12px 40px;
+  }
+  .landing-container {
+    padding: 0 12px;
+  }
+  .card, .pricing-card {
+    padding: 16px;
+  }
+  .hero-title {
+    font-size: 24px !important;
+  }
+  .hero-subtitle {
+    font-size: 13.5px;
+    margin-bottom: 24px;
+  }
+  .landing-logo-text {
+    font-size: 16px;
+  }
+  .btn-primary-large, .btn-secondary-large {
+    padding: 12px 20px;
+    font-size: 14px;
+  }
 }
 

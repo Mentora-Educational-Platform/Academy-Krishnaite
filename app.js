@@ -531,7 +531,7 @@ function renderDashboard() {
 
   mainViewContent.innerHTML = `
     <div class="greeting-section">
-      <h1 class="greeting-title">Radhe Radhe, ${user.name.split(' ')[0]} ðŸ‘‹</h1>
+      <h1 class="greeting-title">Radhe Radhe, ${user.name.split(' ')[0]} 👋</h1>
       <p class="greeting-subtitle">Welcome back. Keep learning, keep building, stay distraction-free.</p>
     </div>
 

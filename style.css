@@ -1753,20 +1753,259 @@ img { display: block; max-width: 100%; }
 .slash-item-title { display: block; font-size: 13.5px; font-weight: 600; color: var(--text-primary); }
 .slash-item-desc { display: block; font-size: 11.5px; color: var(--text-muted); }
 
-/* Editor checklist */
-.editor-checklist-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 5px 0;
+/* ═══════════════════════════════════════════════════════════
+   SECTION 6 — RESPONSIVE SYSTEM
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Mobile Navigation Drawer ── */
+.mobile-drawer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 15, 20, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 999;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s var(--ease), visibility 0.3s var(--ease);
 }
-.editor-checklist-checkbox {
-  width: 18px; height: 18px;
-  accent-color: var(--primary);
-  flex-shrink: 0;
-  cursor: pointer;
+.mobile-drawer-overlay.open {
+  opacity: 1;
+  visibility: visible;
 }
 
+.mobile-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(100%, 320px);
+  height: 100vh;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+  transform: translateX(100%);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+}
+.mobile-drawer.open {
+  transform: translateX(0);
+}
+
+.mobile-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
+}
+.mobile-drawer-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mobile-drawer-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.mobile-drawer-link {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  transition: var(--transition);
+}
+.mobile-drawer-link:hover {
+  color: var(--primary);
+}
+
+/* ── Mobile Form and Touch Constraints ── */
+button, .btn-primary, .btn-secondary, .landing-btn-login, .landing-btn-cta, .upgrade-btn, .resource-download-btn {
+  min-height: 48px; /* Touch target minimum height */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+input, select, textarea {
+  font-size: 16px !important; /* Prevent automatic iOS Safari browser zoom */
+}
+
+/* ── Media Queries ── */
+@media (max-width: 1024px) {
+  .landing-nav-container {
+    padding: 0 24px;
+  }
+  .features-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .membership-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .dashboard-grid { grid-template-columns: 1fr; }
+  .dashboard-sidebar { position: static; }
+  .roadmaps-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  /* Header navigation */
+  .landing-nav-links, .landing-auth-buttons {
+    display: none;
+  }
+  .landing-menu-toggle {
+    display: block !important;
+  }
+  
+  /* Sidebar Drawer on Dashboard */
+  .sidebar {
+    transform: translateX(-100%);
+    z-index: 300;
+    transition: transform 0.3s var(--ease);
+  }
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: var(--shadow-lg);
+  }
+  .main-wrapper {
+    margin-left: 0;
+  }
+  .menu-toggle-btn {
+    display: flex;
+  }
+  
+  /* Content Views */
+  .content-view {
+    padding: 16px;
+  }
+  .reading-body-wrap {
+    padding: 24px 16px;
+  }
+  
+  /* Hero section fluid layout */
+  .landing-hero {
+    padding: 80px 20px 60px;
+  }
+  .hero-title {
+    font-size: clamp(28px, 6vw, 42px);
+    letter-spacing: -1px;
+  }
+  .hero-subtitle {
+    font-size: 15px;
+  }
+  .hero-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  .hero-actions button, .hero-actions a {
+    width: 100%;
+    text-align: center;
+  }
+  
+  /* Features grid */
+  .features-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  /* Roadmaps Preview Timeline */
+  .roadmap-preview-steps {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding-left: 20px;
+    border-left: 2px solid var(--border);
+  }
+  .roadmap-step-dot::after {
+    display: none; /* Hide horizontal timeline line on mobile */
+  }
+  .roadmap-step-dot {
+    flex-direction: row;
+    gap: 12px;
+    text-align: left;
+  }
+  
+  /* Pricing */
+  .membership-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .pricing-card {
+    max-width: 440px;
+    margin: 0 auto;
+  }
+  
+  /* Resources and Assets */
+  .resources-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .resource-card {
+    max-width: 100%;
+  }
+  
+  /* About Acharya Section */
+  .about-card {
+    flex-direction: column;
+    padding: 20px;
+  }
+  .about-image-side {
+    width: 100%;
+    height: 240px;
+    border-radius: var(--radius-md);
+  }
+  .about-info-side {
+    padding: 20px 0 0 0;
+  }
+  
+  /* Editor & Creator Modals */
+  .editor-canvas {
+    padding: 16px 12px 60px;
+  }
+  .editor-title-input {
+    font-size: 24px;
+  }
+  .signin-modal-card {
+    padding: 20px !important;
+    width: 95% !important;
+  }
+  
+  /* Tables horizontal scroll */
+  .editor-body-canvas table, .reading-text-content table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-title {
+    font-size: 28px;
+  }
+  .resources-tabs {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    gap: 8px;
+    scrollbar-width: none;
+  }
+  .resources-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .resource-tab-btn {
+    white-space: nowrap;
+  }
+}
 
 /* ═══════════════════════════════════════════════════════════
    SECTION 5 — ROLE SWITCHER WIDGET

@@ -54,6 +54,10 @@
           <button class="landing-btn-login" onclick="openSignInModal()">Sign In</button>
           <button class="landing-btn-cta" onclick="openSignInModal()">Join Community</button>
         </div>
+
+        <button class="landing-menu-toggle" id="landing-menu-toggle" aria-label="Toggle Navigation" style="display: none; background: none; border: none; font-size: 20px; color: var(--text-primary); cursor: pointer; padding: 6px;">
+          <i data-lucide="menu"></i>
+        </button>
       </div>
     </header>
 
@@ -339,10 +343,40 @@
         </div>
       </form>
 
-      <div style="font-size:11px; text-align:center; color: var(--text-muted); border-top:1px solid var(--border); padding-top:16px; margin-top:20px; line-height: 1.5;">
-        Use <strong>founder@krishnaite.dev</strong> &amp; <strong>Kr!5hn@H</strong> for Founder admin views.
-      </div>
     </div>
+  </div>
+
+  <!-- Mobile Drawer Overlay & Container -->
+  <div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
+  <div class="mobile-drawer" id="mobile-drawer">
+    <div class="mobile-drawer-header">
+      <div class="landing-logo">
+        <svg class="logo-icon" width="24" height="24" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="100" height="100" rx="24" fill="url(#goldGradDrawer)" />
+          <path d="M35 25V75M35 50L65 25M35 50L65 75" stroke="#FFFFFF" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+          <defs>
+            <linearGradient id="goldGradDrawer" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#F3E5AB" />
+              <stop offset="50%" stop-color="#D4AF37" />
+              <stop offset="100%" stop-color="#AA7C11" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <span class="landing-logo-text">Krishnaite</span>
+      </div>
+      <button class="mobile-drawer-close" id="mobile-drawer-close" aria-label="Close Navigation">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+    <nav class="mobile-drawer-nav">
+      <a href="#features" class="mobile-drawer-link">Features</a>
+      <a href="#roadmaps" class="mobile-drawer-link">Roadmaps</a>
+      <a href="#membership" class="mobile-drawer-link">Membership</a>
+      <a href="#about" class="mobile-drawer-link">About</a>
+      <hr style="border: none; border-top: 1px solid var(--border); margin: 16px 0;">
+      <button class="landing-btn-login" onclick="openSignInModal(); closeMobileDrawer();" style="width: 100%; height: 48px; margin-bottom: 12px; display: block;">Sign In</button>
+      <button class="btn-primary" onclick="openSignInModal(); closeMobileDrawer();" style="width: 100%; height: 48px; display: flex; align-items: center; justify-content: center;">Join Community</button>
+    </nav>
   </div>
 
 
@@ -354,6 +388,28 @@
 
     let authMode = "signin";
 
+    function toggleMobileDrawer() {
+      const drawer = document.getElementById("mobile-drawer");
+      const overlay = document.getElementById("mobile-drawer-overlay");
+      const isOpen = drawer.classList.contains("open");
+      
+      if (isOpen) {
+        drawer.classList.remove("open");
+        overlay.classList.remove("open");
+        document.body.style.overflow = "";
+      } else {
+        drawer.classList.add("open");
+        overlay.classList.add("open");
+        document.body.style.overflow = "hidden";
+      }
+    }
+    
+    function closeMobileDrawer() {
+      document.getElementById("mobile-drawer").classList.remove("open");
+      document.getElementById("mobile-drawer-overlay").classList.remove("open");
+      document.body.style.overflow = "";
+    }
+
     // On load check
     document.addEventListener("DOMContentLoaded", async () => {
       const { data: { session } } = await client.auth.getSession();
@@ -363,6 +419,15 @@
       } else {
         localStorage.removeItem("userLoggedIn");
       }
+      
+      document.getElementById("landing-menu-toggle").addEventListener("click", toggleMobileDrawer);
+      document.getElementById("mobile-drawer-close").addEventListener("click", closeMobileDrawer);
+      document.getElementById("mobile-drawer-overlay").addEventListener("click", closeMobileDrawer);
+      
+      document.querySelectorAll(".mobile-drawer-link").forEach(link => {
+        link.addEventListener("click", closeMobileDrawer);
+      });
+
       if (typeof lucide !== 'undefined') {
         lucide.createIcons();
       }

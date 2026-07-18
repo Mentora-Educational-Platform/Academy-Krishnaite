@@ -62,7 +62,7 @@ exports.handler = async (event, context) => {
 
     // 1. Verify the subscription status (Wait and retry if state is 'created')
     if (subscriptionDetails.status === "created") {
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise(resolve => setTimeout(resolve, 5000));
 
       const refreshedSubscription = await razorpay.subscriptions.fetch(
         razorpay_subscription_id

@@ -142,10 +142,11 @@ async function loadState() {
   }
 
   if (dbProfile) {
+    userRole = dbProfile.tier || "free";
+
+    // Keep founder privileges separately
     if (dbProfile.role === "founder") {
-      userRole = "founder";
-    } else {
-      userRole = dbProfile.tier || "free";
+      state.isFounder = true;
     }
   }
 

@@ -732,7 +732,7 @@ function renderCommunityFeed(communityKey) {
                   <span class="author-name">${post.author.name}</span>
                   <span class="role-badge">${post.author.role}</span>
                 </div>
-                <span class="post-time">${new Date(post.createdAt).toLocaleDateString()} â€¢ ${readTime} min read</span>
+                <span class="post-time">${new Date(post.createdAt).toLocaleDateString()} &bull; ${readTime} min read</span>
               </div>
             </div>
             
@@ -870,7 +870,7 @@ function renderReadingMode(postId) {
                 <span class="comment-action-link ${cLiked ? 'active' : ''}" onclick="likeComment('${post.id}', '${comment.id}', false)">
                   Like${comment.likes.length > 0 ? ` (${comment.likes.length})` : ''}
                 </span>
-                <span>â€¢</span>
+                <span>&bull;</span>
                 <span class="comment-action-link" onclick="focusReplyInput('${post.id}', '${comment.id}')">Reply</span>
               </div>
             </div>
@@ -904,7 +904,7 @@ function renderReadingMode(postId) {
               <img src="${post.author.avatar}" class="reading-author-avatar" alt="${post.author.name}">
               <div>
                 <div style="font-weight:600; font-size:14px;">${post.author.name} <span class="role-badge" style="font-size:9px;">${post.author.role}</span></div>
-                <div class="reading-meta-text">Published in #${post.community} â€¢ ${new Date(post.createdAt).toLocaleDateString()}</div>
+                <div class="reading-meta-text">Published in #${post.community} &bull; ${new Date(post.createdAt).toLocaleDateString()}</div>
               </div>
             </div>
             
@@ -1493,7 +1493,7 @@ function renderSearchResults(query) {
             </div>
             <div class="learning-details">
               <div class="learning-title" style="font-weight: 600;">${rm.title}</div>
-              <div style="font-size: 12px; color: var(--text-secondary);">${rm.difficulty} â€¢ ${rm.duration}</div>
+              <div style="font-size: 12px; color: var(--text-secondary);">${rm.difficulty} &bull; ${rm.duration}</div>
             </div>
             <i data-lucide="chevron-right" style="color: var(--text-muted);"></i>
           </div>

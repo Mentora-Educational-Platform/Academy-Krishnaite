@@ -557,6 +557,7 @@ async function simulateUpgrade(viewName) {
       }
     };
 
+    console.log("RAZORPAY OPTIONS", options);
     const rzp = new window.Razorpay(options);
     rzp.open();
   } catch (err) {

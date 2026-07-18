@@ -117,7 +117,37 @@ async function loadState() {
   const userEmail = session.user.email;
   const rawName = userEmail.split('@')[0];
   const formattedName = rawName.split(/[._-]/).map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
-  const userRole = (userEmail === "founder@krishnaite.dev") ? "founder" : "free";
+  
+  let userRole = (userEmail === "founder@krishnaite.dev") ? "founder" : "free";
+  let dbProfile = null;
+
+  // Self-healing: Ensure user profile is registered in Supabase database profiles table
+  try {
+    const { data: profile } = await client.from("profiles").select("id, tier, role").eq("id", session.user.id).maybeSingle();
+    dbProfile = profile;
+    if (!profile) {
+      const defaultTier = userEmail === "founder@krishnaite.dev" ? "pro" : "free";
+      const { data: newProfile } = await client.from("profiles").insert([{
+        id: session.user.id,
+        email: userEmail,
+        name: userEmail === "founder@krishnaite.dev" ? "Harshita" : formattedName,
+        role: userEmail === "founder@krishnaite.dev" ? "founder" : "member",
+        tier: defaultTier,
+        avatar_url: userEmail === "founder@krishnaite.dev" ? "assets/founder.png" : `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(userEmail)}`
+      }]).select().single();
+      dbProfile = newProfile;
+    }
+  } catch (err) {
+    console.warn("Could not sync profile to database:", err);
+  }
+
+  if (dbProfile) {
+    if (dbProfile.role === "founder") {
+      userRole = "founder";
+    } else {
+      userRole = dbProfile.tier || "free";
+    }
+  }
 
   if (!state.profiles) state.profiles = {};
   
@@ -125,7 +155,7 @@ async function loadState() {
     email: userEmail,
     name: userEmail === "founder@krishnaite.dev" ? "Harshita" : formattedName,
     role: userEmail === "founder@krishnaite.dev" ? "founder" : "member",
-    tier: userRole,
+    tier: userRole === "founder" ? "pro" : userRole,
     joinDate: state.profiles[userRole]?.joinDate || "July 2026",
     avatar: userEmail === "founder@krishnaite.dev" 
       ? "assets/founder.png" 
@@ -133,23 +163,6 @@ async function loadState() {
     savedPostIds: state.profiles[userRole]?.savedPostIds || [],
     commentHistory: state.profiles[userRole]?.commentHistory || []
   };
-
-  // Self-healing: Ensure user profile is registered in Supabase database profiles table
-  try {
-    const { data: profileExists } = await client.from("profiles").select("id").eq("id", session.user.id).maybeSingle();
-    if (!profileExists) {
-      await client.from("profiles").insert([{
-        id: session.user.id,
-        email: userEmail,
-        name: userEmail === "founder@krishnaite.dev" ? "Harshita" : formattedName,
-        role: userEmail === "founder@krishnaite.dev" ? "founder" : "member",
-        tier: userEmail === "founder@krishnaite.dev" ? "pro" : "free",
-        avatar_url: userEmail === "founder@krishnaite.dev" ? "assets/founder.png" : `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(userEmail)}`
-      }]);
-    }
-  } catch (err) {
-    console.warn("Could not sync profile to database:", err);
-  }
 
   state.currentUserRole = userRole;
   state.userLoggedIn = true;
@@ -442,25 +455,117 @@ function renderUpgradeCard(viewName) {
   `;
 }
 
-function simulateUpgrade(viewName) {
-  let newRole = "explorer";
-  if (viewName === "comm-pro") {
-    newRole = "pro";
+async function simulateUpgrade(viewName) {
+  const selectedPlan = (viewName === "comm-pro") ? "pro" : "explorer";
+  const submitBtn = document.querySelector(".upgrade-btn");
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Processing...";
   }
-  state.currentUserRole = newRole;
-  state.activeView = viewName;
-  
-  state.notifications.unshift({
-    id: "notif-upgrade-" + Date.now(),
-    text: `ðŸŽ‰ Thank you! Your account has been upgraded to **${newRole.toUpperCase()}** member tier.`,
-    time: "Just now",
-    unread: true,
-    type: "system"
-  });
 
-  saveState();
-  updateUserInterfaceElements();
-  renderActiveView();
+  try {
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) throw new Error("Please log in to upgrade.");
+
+    // Load Razorpay Script dynamically if not already available
+    if (!window.Razorpay) {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      document.head.appendChild(script);
+      await new Promise((resolve, reject) => {
+        script.onload = resolve;
+        script.onerror = () => reject(new Error("Failed to load Razorpay SDK."));
+      });
+    }
+
+    // 1. Create subscription request to Netlify Function
+    const res = await fetch("/.netlify/functions/create-subscription", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan: selectedPlan })
+    });
+
+    if (!res.ok) {
+      const errData = await res.json();
+      throw new Error(errData.error || "Failed to initiate subscription.");
+    }
+
+    const { subscriptionId } = await res.json();
+
+    // 2. Open Razorpay Checkout modal
+    const options = {
+      key: "rzp_live_T7qdOA6MamdgQu", // Live Razorpay Key ID
+      subscription_id: subscriptionId,
+      name: "Krishnaite Academy",
+      description: `${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} Membership Tier`,
+      image: "assets/favicon.png",
+      handler: async function (response) {
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = "Verifying payment...";
+        }
+
+        try {
+          // 3. Verify payment signature on the backend Netlify function
+          const verifyRes = await fetch("/.netlify/functions/verify-payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: session.user.id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_subscription_id: response.razorpay_subscription_id,
+              razorpay_signature: response.razorpay_signature
+            })
+          });
+
+          if (!verifyRes.ok) {
+            const verifyErr = await verifyRes.json();
+            throw new Error(verifyErr.error || "Payment verification failed.");
+          }
+
+          const verifyData = await verifyRes.json();
+          if (verifyData.success) {
+            alert(`🎉 Payment verified successfully! Your account has been upgraded to ${selectedPlan.toUpperCase()}.`);
+            // Refresh profiles from Supabase and render
+            await loadState();
+            renderActiveView();
+          } else {
+            throw new Error("Payment verification rejected by server.");
+          }
+        } catch (verErr) {
+          alert("Verification Error: " + verErr.message);
+        } finally {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Unlock Immediate Access";
+          }
+        }
+      },
+      prefill: {
+        email: session.user.email
+      },
+      theme: {
+        color: "#c5a059"
+      },
+      modal: {
+        ondismiss: function () {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Unlock Immediate Access";
+          }
+        }
+      }
+    };
+
+    const rzp = new window.Razorpay(options);
+    rzp.open();
+  } catch (err) {
+    alert("Error: " + err.message);
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Unlock Immediate Access";
+    }
+  }
 }
 
 function updateUserInterfaceElements() {

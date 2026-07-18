@@ -60,7 +60,17 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // 1. Verify the subscription status
+    // 1. Verify the subscription status (Wait and retry if state is 'created')
+    if (subscriptionDetails.status === "created") {
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
+      const refreshedSubscription = await razorpay.subscriptions.fetch(
+        razorpay_subscription_id
+      );
+
+      subscriptionDetails.status = refreshedSubscription.status;
+    }
+
     if (!["authenticated", "active"].includes(subscriptionDetails.status)) {
       return {
         statusCode: 400,

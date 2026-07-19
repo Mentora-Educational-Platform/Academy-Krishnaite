@@ -690,7 +690,7 @@ function renderDashboard() {
                 <h3 class="pinned-title">${latestAnnouncement.title}</h3>
                 <p class="pinned-desc">${latestAnnouncement.excerpt || latestAnnouncement.body.substring(0, 150) + '...'}</p>
                 <div class="pinned-footer">
-                  <span>Posted in #${latestAnnouncement.community} by Acharya</span>
+                  <span>Posted in #${latestAnnouncement.community} by Founder</span>
                   <a href="#" class="pinned-view-link">
                     Read Article <i data-lucide="arrow-right" style="width: 14px; height: 14px;"></i>
                   </a>

@@ -61,6 +61,17 @@
       transform: translateY(-2px);
       box-shadow: var(--shadow-sm) !important;
     }
+    .hero-preview-container {
+      animation: heroReveal 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    @keyframes heroReveal {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
     
     @media (max-width: 768px) {
       .latest-columns-grid {
@@ -128,11 +139,10 @@
     <section class="landing-hero">
       <div class="hero-content">
         <div class="hero-badge">
-          <i data-lucide="sparkles" style="width: 14px; height: 14px; color: var(--primary);"></i>
-          <span>A Dedicated Space for Software Engineering Excellence</span>
+          <span>A Calm, Structured Academy for Modern Technology</span>
         </div>
-        <h1 class="hero-title" style="font-family: var(--font-display); font-weight: 800; letter-spacing: -1.2px; line-height: 1.15;">Master Software Engineering<br>Without the Noise</h1>
-        <p class="hero-subtitle">A minimalist sanctuary for serious builders. Study long-form technical guides, track structured roadmaps, access production boilerplates, and master systems architecture without social media distraction.</p>
+        <h1 class="hero-title" style="font-family: var(--font-display); font-weight: 800; letter-spacing: -1.2px; line-height: 1.15;">Master Modern Technology<br>Without the Noise</h1>
+        <p class="hero-subtitle">Krishnaite is a calm, founder-led learning platform where anyone can confidently master technology—from everyday digital skills and AI productivity to advanced software engineering, systems architecture, and professional development. Learn through structured roadmaps, long-form guides, and distraction-free learning.</p>
         
         <div class="hero-actions">
           <button class="btn-primary-large" onclick="openSignInModal()">Join Community</button>
@@ -165,32 +175,32 @@
     <!-- Trust Cards Section -->
     <section id="features" class="landing-features">
       <div class="landing-container">
-        <h2 class="landing-section-heading" data-translate-key="features_title">Learn by Building, Guided by Experts</h2>
-        <p class="landing-section-subheading" data-translate-key="features_subtitle">We focus entirely on deep engineering walkthroughs, high-quality resources, and interactive roadmaps.</p>
+        <h2 class="landing-section-heading" data-translate-key="features_title">Learn Technology with Clarity, One Step at a Time</h2>
+        <p class="landing-section-subheading" data-translate-key="features_subtitle">We provide deep engineering guides for developers, alongside practical digital literacy paths for everyday technology users.</p>
 
         <div class="features-grid">
           <div class="card feature-card">
             <div class="feature-icon-sphere"><i data-lucide="book-open"></i></div>
-            <h3 class="feature-card-title" data-translate-key="feature1_title">Founder Publications</h3>
-            <p class="feature-card-text" data-translate-key="feature1_desc">Access detailed technical guides on compiler construction, systems architecture, and database tuning directly from the Acharya.</p>
+            <h3 class="feature-card-title">Guides & Publications</h3>
+            <p class="feature-card-text">Access detailed tutorials on systems architecture, compiler engineering, and practical daily technology basics.</p>
           </div>
 
           <div class="card feature-card">
             <div class="feature-icon-sphere"><i data-lucide="map"></i></div>
-            <h3 class="feature-card-title" data-translate-key="feature2_title">Structured Roadmaps</h3>
-            <p class="feature-card-text" data-translate-key="feature2_desc">Track your learning journey step-by-step from core foundations up to advanced backend architectures and cloud environments.</p>
+            <h3 class="feature-card-title">Structured Roadmaps</h3>
+            <p class="feature-card-text">Track your learning journey step-by-step, whether you are mastering software systems or building everyday digital confidence.</p>
           </div>
 
           <div class="card feature-card">
             <div class="feature-icon-sphere"><i data-lucide="download"></i></div>
-            <h3 class="feature-card-title" data-translate-key="feature3_title">Boilerplates & Guides</h3>
-            <p class="feature-card-text" data-translate-key="feature3_desc">Download hot-reload boilerplates, cheatsheets, vector index templates, and configuration assets to save you hours of startup code.</p>
+            <h3 class="feature-card-title">Code & Asset Packs</h3>
+            <p class="feature-card-text">Download production boilerplates, cheatsheets, configuration scripts, and everyday digital checklists to save you time.</p>
           </div>
 
           <div class="card feature-card">
             <div class="feature-icon-sphere"><i data-lucide="message-square"></i></div>
-            <h3 class="feature-card-title" data-translate-key="feature4_title">Thoughtful Discussion</h3>
-            <p class="feature-card-text" data-translate-key="feature4_desc">Engage in threaded community comments built for clarity. Ask questions, seek code reviews, and discuss engineering principles calmly.</p>
+            <h3 class="feature-card-title">Thoughtful Community</h3>
+            <p class="feature-card-text">Engage in calm, threaded discussions. Ask questions, seek feedback, and share technical knowledge without distractions.</p>
           </div>
         </div>
       </div>
@@ -200,8 +210,8 @@
     <section id="roadmaps" class="landing-roadmaps-section">
       <div class="landing-container">
         <div style="text-align: center; max-width: 600px; margin: 0 auto 40px auto;">
-          <h2 class="landing-section-heading" style="margin-bottom:12px;" data-translate-key="curriculum_title">The Engineering Curriculum</h2>
-          <p class="landing-section-subheading" data-translate-key="curriculum_subtitle">Interactive, checkpoint-driven learning roadmaps designed to take you from hobbyist to professional engineer.</p>
+          <h2 class="landing-section-heading" style="margin-bottom:12px;">The Academy Curriculums</h2>
+          <p class="landing-section-subheading">Structured, checkpoint-driven roadmaps designed to take you from digital fundamentals to professional systems engineering.</p>
         </div>
 
         <div class="roadmap-preview-card card">
@@ -361,20 +371,20 @@
             <div style="width: 180px; height: 180px; border-radius: 50%; overflow: hidden; margin: 0 auto 16px auto; border: 3px solid var(--border); box-shadow: var(--shadow-sm);">
               <img src="assets/founder.png" alt="Founder" style="width: 100%; height: 100%; object-fit: cover;">
             </div>
-            <strong style="font-size: 16px; font-weight: 700; color: var(--text-primary); display: block;">Harshita</strong>
-            <span style="font-size: 13px; color: var(--text-muted); display: block;">Founder & Lead Architect</span>
+            <strong style="font-size: 16px; font-weight: 700; color: var(--text-primary); display: block;">Founder</strong>
+            <span style="font-size: 13px; color: var(--text-muted); display: block;">Lead Architect</span>
           </div>
           
           <div style="display: flex; flex-direction: column; gap: 20px;" class="about-letter-col">
             <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--primary); letter-spacing: 1.5px;">A Letter from the Founder</span>
-            <h2 style="font-family: var(--font-display); font-size: 32px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.8px; margin: 0;">Building a sanctuary for software engineering.</h2>
+            <h2 style="font-family: var(--font-display); font-size: 32px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.8px; margin: 0;">Building a Sanctuary for Technology Learning</h2>
             <div style="font-size: 15px; color: var(--text-secondary); line-height: 1.75; display: flex; flex-direction: column; gap: 16px;">
-              <p>Modern platforms are built to hijack attention. Infinite scroll, clickbait thumbnails, and shallow tutorials are poisonous to genuine mastery. Real engineering is not learned in 30-second soundbites.</p>
-              <p>I built <strong>Krishnaite Academy</strong> as a sanctuary. A calm, minimalist harbor where long-form architectural breakdowns, code reviews, and structured roadmaps are valued. It is a space designed specifically for software builders who want to study deep concepts without distraction.</p>
+              <p>Modern platforms are designed to compete for attention instead of helping people truly learn. Endless scrolling, algorithmic feeds, and shallow tutorials make it difficult to build genuine confidence with technology—whether you're learning to write software or simply trying to use the digital world more comfortably.</p>
+              <p>I built Krishnaite as a sanctuary for learning. A calm, minimalist place where curiosity matters more than algorithms. Whether someone is creating their very first email account, learning how to stay safe online, exploring artificial intelligence, or mastering systems architecture, they deserve thoughtful guidance, structured learning, and the time to truly understand technology without distraction.</p>
             </div>
             <div style="margin-top: 12px; border-top: 1px solid var(--border); padding-top: 20px; font-style: italic; color: var(--text-muted); font-size: 14px;">
               Sincerely,<br>
-              <span style="font-family: var(--font-display); font-weight: 700; font-style: normal; color: var(--text-primary); font-size: 16px; margin-top: 6px; display: inline-block;">Harshita</span>
+              <span style="font-family: var(--font-display); font-weight: 700; font-style: normal; color: var(--text-primary); font-size: 16px; margin-top: 6px; display: inline-block;">Founder</span>
             </div>
           </div>
         </div>
@@ -400,7 +410,7 @@
               </svg>
               <span class="landing-logo-text" style="font-size:16px;">Krishnaite</span>
             </div>
-            <p style="font-size: 13px; color: var(--text-muted); margin-top: 10px; max-width: 250px;" data-translate-key="footer_desc">A calm, premium sanctuary for software builders.</p>
+            <p style="font-size: 13px; color: var(--text-muted); margin-top: 10px; max-width: 250px;">A calm, premium sanctuary for lifelong technology learners.</p>
           </div>
           
           <div class="footer-links-col">
@@ -411,10 +421,10 @@
           </div>
 
           <div class="footer-links-col">
-            <h4 data-translate-key="about">Company</h4>
-            <a href="#about" data-translate-key="footer_about">About Acharya</a>
-            <a href="#" data-translate-key="footer_privacy">Privacy Policy</a>
-            <a href="#" data-translate-key="footer_terms">Terms of Use</a>
+             <h4 data-translate-key="about">Company</h4>
+             <a href="#about" data-translate-key="footer_about">About Founder</a>
+             <a href="#" data-translate-key="footer_privacy">Privacy Policy</a>
+             <a href="#" data-translate-key="footer_terms">Terms of Use</a>
           </div>
         </div>
 
@@ -549,33 +559,40 @@
     async function loadLatestContent() {
       try {
         const [postsRes, roadmapsRes, resourcesRes] = await Promise.all([
-          client.from("posts").select("id, title, community").order("published_at", { ascending: false }).limit(3),
-          client.from("roadmaps").select("id, title, difficulty").order("published_at", { ascending: false }).limit(3),
-          client.from("resources").select("id, title, type").limit(3)
+          client.from("posts").select("id, title, body, community").order("published_at", { ascending: false }).limit(3),
+          client.from("roadmaps").select("id, title, difficulty, duration").order("published_at", { ascending: false }).limit(3),
+          client.from("resources").select("id, title, type, description").limit(3)
         ]);
 
         const articles = postsRes.data || [];
         const roadmaps = roadmapsRes.data || [];
         const resources = resourcesRes.data || [];
 
-        renderLatestCol("latest-articles-container", articles, item => `
-          <div class="card" style="padding: 14px; cursor: pointer; transition: var(--transition);" onclick="openSignInModal()">
-            <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--primary); letter-spacing: 0.5px;">#${item.community}</span>
-            <h4 style="font-size: 13.5px; font-weight: 600; margin: 4px 0 0 0; color: var(--text-primary); line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.title}</h4>
-          </div>
-        `);
+        renderLatestCol("latest-articles-container", articles, item => {
+          const readTime = Math.ceil((item.body || "").replace(/<[^>]*>/g, "").length / 800) || 3;
+          const excerpt = (item.body || "").replace(/<[^>]*>/g, "").substring(0, 80) + "...";
+          return `
+            <div class="card" style="padding: 18px; cursor: pointer; transition: var(--transition); display: flex; flex-direction: column; gap: 8px;" onclick="openSignInModal()">
+              <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--primary); letter-spacing: 0.5px;">#${item.community} • ${readTime} min read</span>
+              <h4 style="font-size: 14.5px; font-weight: 700; margin: 0; color: var(--text-primary); line-height: 1.35;">${item.title}</h4>
+              <p style="font-size: 12px; color: var(--text-secondary); margin: 0; line-height: 1.5;">${excerpt}</p>
+            </div>
+          `;
+        });
 
         renderLatestCol("latest-roadmaps-container", roadmaps, item => `
-          <div class="card" style="padding: 14px; cursor: pointer; transition: var(--transition);" onclick="openSignInModal()">
-            <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">${item.difficulty}</span>
-            <h4 style="font-size: 13.5px; font-weight: 600; margin: 4px 0 0 0; color: var(--text-primary); line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.title}</h4>
+          <div class="card" style="padding: 18px; cursor: pointer; transition: var(--transition); display: flex; flex-direction: column; gap: 8px;" onclick="openSignInModal()">
+            <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">${item.difficulty} • ${item.duration || 'Flexible'}</span>
+            <h4 style="font-size: 14.5px; font-weight: 700; margin: 0; color: var(--text-primary); line-height: 1.35;">${item.title}</h4>
+            <p style="font-size: 12px; color: var(--text-secondary); margin: 0; line-height: 1.5;">Structured path with checkpoints to master this topic.</p>
           </div>
         `);
 
         renderLatestCol("latest-resources-container", resources, item => `
-          <div class="card" style="padding: 14px; cursor: pointer; transition: var(--transition);" onclick="openSignInModal()">
+          <div class="card" style="padding: 18px; cursor: pointer; transition: var(--transition); display: flex; flex-direction: column; gap: 8px;" onclick="openSignInModal()">
             <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--primary); letter-spacing: 0.5px;">${item.type}</span>
-            <h4 style="font-size: 13.5px; font-weight: 600; margin: 4px 0 0 0; color: var(--text-primary); line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.title}</h4>
+            <h4 style="font-size: 14.5px; font-weight: 700; margin: 0; color: var(--text-primary); line-height: 1.35;">${item.title}</h4>
+            <p style="font-size: 12px; color: var(--text-secondary); margin: 0; line-height: 1.5;">${item.description || 'Production-ready code configuration boilerplate.'}</p>
           </div>
         `);
       } catch (err) {
@@ -596,39 +613,45 @@
 
     function fallbackLatestContent() {
       const fallbackArticles = [
-        { title: "Building a Production-Grade Markdown Compiler", community: "free" },
-        { title: "Rust Concurrency: Mastering Mutexes and Channels", community: "explorer" },
-        { title: "Database Architecture: Custom Vector Index Tuning", community: "pro" }
+        { title: "Building a Production-Grade Markdown Compiler", community: "free", body: "Study tokenizer development, AST structure parsing, html generation, and performance optimization." },
+        { title: "Everyday Tech: Spotting Digital Safety & Phishing Scams", community: "free", body: "Learn critical visual patterns, link validation, and safety procedures to protect your digital identity." },
+        { title: "Database Architecture: Custom Vector Index Tuning", community: "pro", body: "Explore HNSW graph building, IVF-ADC quantization algorithms, and vector space metrics." }
       ];
       const fallbackRoadmaps = [
-        { title: "Programming Foundations Roadmap", difficulty: "Beginner" },
-        { title: "Advanced Systems Architect Roadmap", difficulty: "Advanced" },
-        { title: "Web Architecture & Concurrency Roadmap", difficulty: "Intermediate" }
+        { title: "Programming Foundations Roadmap", difficulty: "Beginner", duration: "6 checkpoints" },
+        { title: "Everyday Digital Life Skills Roadmap", difficulty: "Beginner", duration: "4 checkpoints" },
+        { title: "AI & Automation Productivity Roadmap", difficulty: "Intermediate", duration: "8 checkpoints" }
       ];
       const fallbackResources = [
-        { title: "Complete Boilerplate configurations", type: "boilerplate" },
-        { title: "Standard Member Tag CSS Templates", type: "guide" },
-        { title: "Memory Allocation Cheatsheets", type: "cheatsheet" }
+        { title: "Complete Hot-Reload Go boilerplates", type: "boilerplate", description: "Instantly set up API servers with clean environment configurations and struct validation." },
+        { title: "Everyday Digital Safety Checklists", type: "guide", description: "A simple step-by-step audit list to secure your email, smartphone, and financial accounts." },
+        { title: "Memory Allocation & Heap Cheatsheets", type: "cheatsheet", description: "A visual pocket guide to stack frames, heap pointers, and garbage collection behaviors." }
       ];
 
-      renderLatestCol("latest-articles-container", fallbackArticles, item => `
-        <div class="card" style="padding: 14px; cursor: pointer; transition: var(--transition);" onclick="openSignInModal()">
-          <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--primary); letter-spacing: 0.5px;">#${item.community}</span>
-          <h4 style="font-size: 13.5px; font-weight: 600; margin: 4px 0 0 0; color: var(--text-primary); line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.title}</h4>
-        </div>
-      `);
+      renderLatestCol("latest-articles-container", fallbackArticles, item => {
+        const readTime = Math.ceil(item.body.length / 25) || 3;
+        return `
+          <div class="card" style="padding: 18px; cursor: pointer; transition: var(--transition); display: flex; flex-direction: column; gap: 8px;" onclick="openSignInModal()">
+            <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--primary); letter-spacing: 0.5px;">#${item.community} • ${readTime} min read</span>
+            <h4 style="font-size: 14.5px; font-weight: 700; margin: 0; color: var(--text-primary); line-height: 1.35;">${item.title}</h4>
+            <p style="font-size: 12px; color: var(--text-secondary); margin: 0; line-height: 1.5;">${item.body}</p>
+          </div>
+        `;
+      });
 
       renderLatestCol("latest-roadmaps-container", fallbackRoadmaps, item => `
-        <div class="card" style="padding: 14px; cursor: pointer; transition: var(--transition);" onclick="openSignInModal()">
-          <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">${item.difficulty}</span>
-          <h4 style="font-size: 13.5px; font-weight: 600; margin: 4px 0 0 0; color: var(--text-primary); line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.title}</h4>
+        <div class="card" style="padding: 18px; cursor: pointer; transition: var(--transition); display: flex; flex-direction: column; gap: 8px;" onclick="openSignInModal()">
+          <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">${item.difficulty} • ${item.duration}</span>
+          <h4 style="font-size: 14.5px; font-weight: 700; margin: 0; color: var(--text-primary); line-height: 1.35;">${item.title}</h4>
+          <p style="font-size: 12px; color: var(--text-secondary); margin: 0; line-height: 1.5;">Structured path with checkpoints to master this topic.</p>
         </div>
       `);
 
       renderLatestCol("latest-resources-container", fallbackResources, item => `
-        <div class="card" style="padding: 14px; cursor: pointer; transition: var(--transition);" onclick="openSignInModal()">
+        <div class="card" style="padding: 18px; cursor: pointer; transition: var(--transition); display: flex; flex-direction: column; gap: 8px;" onclick="openSignInModal()">
           <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--primary); letter-spacing: 0.5px;">${item.type}</span>
-          <h4 style="font-size: 13.5px; font-weight: 600; margin: 4px 0 0 0; color: var(--text-primary); line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.title}</h4>
+          <h4 style="font-size: 14.5px; font-weight: 700; margin: 0; color: var(--text-primary); line-height: 1.35;">${item.title}</h4>
+          <p style="font-size: 12px; color: var(--text-secondary); margin: 0; line-height: 1.5;">${item.description}</p>
         </div>
       `);
     }

@@ -678,6 +678,8 @@ img { display: block; max-width: 100%; }
   display: flex;
   min-height: 100vh;
   background: var(--bg);
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 /* ── Sidebar ── */
@@ -788,6 +790,9 @@ img { display: block; max-width: 100%; }
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 /* ── App Header ── */
@@ -1888,6 +1893,35 @@ input, select, textarea {
   /* Content Views */
   .content-view {
     padding: 16px;
+  }
+  .card {
+    padding: 16px;
+  }
+  .continue-learning-item {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+  .learning-icon-box {
+    width: 32px;
+    height: 32px;
+  }
+  .learning-icon-box svg, .learning-icon-box i {
+    width: 16px;
+    height: 16px;
+  }
+  .learning-action-btn {
+    padding: 4px 10px;
+    font-size: 11px;
+  }
+  .app-header {
+    padding: 0 16px;
+    gap: 10px;
+  }
+  .search-input {
+    width: 160px;
+  }
+  .search-input:focus {
+    width: 180px;
   }
   .reading-body-wrap {
     padding: 24px 16px;

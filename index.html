@@ -39,6 +39,49 @@
   <!-- Cache-busted stylesheet -->
   <link rel="stylesheet" href="style.css?v=7">
   <script src="translation.js?v=9"></script>
+  
+  <style>
+    /* Isolated Landing Page Enhancements */
+    .feature-card {
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease !important;
+    }
+    .feature-card:hover {
+      transform: translateY(-4px) !important;
+      box-shadow: var(--shadow-md) !important;
+    }
+    .pricing-card.highlighted {
+      border: 2px solid var(--primary) !important;
+      transform: scale(1.02);
+      box-shadow: var(--shadow-md) !important;
+    }
+    .pricing-card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+    }
+    .pricing-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm) !important;
+    }
+    
+    @media (max-width: 768px) {
+      .latest-columns-grid {
+        grid-template-columns: 1fr !important;
+        gap: 32px !important;
+      }
+      .about-grid-wrapper {
+        grid-template-columns: 1fr !important;
+        gap: 32px !important;
+      }
+      .about-avatar-col {
+        text-align: center !important;
+      }
+      .about-letter-col h2 {
+        font-size: 26px !important;
+      }
+      .pricing-card.highlighted {
+        transform: scale(1) !important;
+      }
+    }
+  </style>
 </head>
 <body>
 
@@ -86,25 +129,34 @@
       <div class="hero-content">
         <div class="hero-badge">
           <i data-lucide="sparkles" style="width: 14px; height: 14px; color: var(--primary);"></i>
-          <span data-translate-key="hero_badge_text">A Dedicated Space for Software Engineering Excellence</span>
+          <span>A Dedicated Space for Software Engineering Excellence</span>
         </div>
-        <h1 class="hero-title" data-translate-key="hero_title">A Calm, Minimalist Place <br>to Master Software Engineering</h1>
-        <p class="hero-subtitle" data-translate-key="hero_subtitle">Escape the noise. Consume long-form engineering guides from founders, track structured roadmaps, access boilerplates, and build your technical career without social-media distractions.</p>
+        <h1 class="hero-title" style="font-family: var(--font-display); font-weight: 800; letter-spacing: -1.2px; line-height: 1.15;">Master Software Engineering<br>Without the Noise</h1>
+        <p class="hero-subtitle">A minimalist sanctuary for serious builders. Study long-form technical guides, track structured roadmaps, access production boilerplates, and master systems architecture without social media distraction.</p>
+        
         <div class="hero-actions">
-          <button class="btn-primary-large" onclick="openSignInModal()"><span data-translate-key="hero_action_enter">Enter Academy</span> <i data-lucide="arrow-right" style="width: 18px; height: 18px; display:inline-block; vertical-align:middle;"></i></button>
-          <a href="#membership" class="btn-secondary-large" data-translate-key="hero_action_tiers">Explore Tiers</a>
+          <button class="btn-primary-large" onclick="openSignInModal()">Join Community</button>
+          <a href="#membership" class="btn-secondary-large">Explore Memberships</a>
         </div>
         
         <div class="hero-member-count" style="margin-top: 24px; font-size: 14.5px; font-weight: 600; color: var(--text-secondary); display: inline-flex; align-items: center; gap: 6px; padding: 6px 16px; background: var(--bg-hover); border-radius: 20px; border: 1.5px solid var(--border); box-shadow: var(--shadow-xs);">
           <span>👥</span> <span id="community-member-count">—</span> <span>Krishnaites</span>
         </div>
         
-        <div class="hero-trusted-by">
-          <span data-translate-key="hero_trusted">Trusted by modern builders worldwide</span>
-          <div class="trusted-logos">
-            <span>NOTION</span>
-            <span>LINEAR</span>
-            <span>APPLE STYLE</span>
+        <div class="hero-trusted-by" style="margin-top: 48px; border-top: 1px solid var(--border); padding-top: 28px; width: 100%; max-width: 680px; margin-left: auto; margin-right: auto;">
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: center;">
+            <div style="display: flex; flex-direction: column; align-items: center;">
+              <span style="font-size: 13px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px;">Founder-Led</span>
+              <span style="font-size: 12px; color: var(--text-muted);">Curated curriculum</span>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center; border-left: 1px solid var(--border); border-right: 1px solid var(--border);">
+              <span style="font-size: 13px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px;">Zen Atmosphere</span>
+              <span style="font-size: 12px; color: var(--text-muted);">Zero distraction</span>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center;">
+              <span style="font-size: 13px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px;">Dynamic Paths</span>
+              <span style="font-size: 12px; color: var(--text-muted);">Interactive roadmaps</span>
+            </div>
           </div>
         </div>
       </div>
@@ -197,6 +249,49 @@
       </div>
     </section>
 
+    <!-- Latest From Krishnaite Section -->
+    <section id="latest-content" class="landing-latest" style="padding: 100px 0; border-top: 1px solid var(--border);">
+      <div class="landing-container">
+        <div style="text-align: center; max-width: 600px; margin: 0 auto 48px auto;">
+          <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--primary); letter-spacing: 1.5px;">Academy Updates</span>
+          <h2 class="landing-section-heading" style="margin-top: 12px; margin-bottom: 12px;">Latest From Krishnaite</h2>
+          <p class="landing-section-subheading">Explore newest publications, active engineering curriculums, and code assets directly from the database.</p>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px;" class="latest-columns-grid">
+          <!-- Column 1: Articles -->
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+              <i data-lucide="book-open" style="width: 16px; height: 16px; color: var(--primary);"></i> Publications
+            </div>
+            <div id="latest-articles-container" style="display: flex; flex-direction: column; gap: 16px;">
+              <div style="font-size: 12px; color: var(--text-muted); font-style: italic;">Loading...</div>
+            </div>
+          </div>
+
+          <!-- Column 2: Roadmaps -->
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+              <i data-lucide="map" style="width: 16px; height: 16px; color: var(--primary);"></i> Curriculums
+            </div>
+            <div id="latest-roadmaps-container" style="display: flex; flex-direction: column; gap: 16px;">
+              <div style="font-size: 12px; color: var(--text-muted); font-style: italic;">Loading...</div>
+            </div>
+          </div>
+
+          <!-- Column 3: Resources -->
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+              <i data-lucide="download" style="width: 16px; height: 16px; color: var(--primary);"></i> Engineering Assets
+            </div>
+            <div id="latest-resources-container" style="display: flex; flex-direction: column; gap: 16px;">
+              <div style="font-size: 12px; color: var(--text-muted); font-style: italic;">Loading...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Membership Plans Section -->
     <section id="membership" class="landing-membership">
       <div class="landing-container">
@@ -258,19 +353,28 @@
       </div>
     </section>
 
-    <!-- About / Acharya Section -->
-    <section id="about" class="landing-about">
-      <div class="landing-container">
-        <div class="about-card card">
-          <div class="about-image-side" style="background-image: url('assets/founder.png'); background-position: center; background-size: cover;"></div>
-          <div class="about-info-side">
-            <span class="about-subtitle" data-translate-key="about_tag">ABOUT THE FOUNDER</span>
-            <h2 class="about-title" data-translate-key="about_title">Why I Built Krishnaite Academy</h2>
-            <p class="about-text" data-translate-key="about_p1">"Modern social-media platforms and video portals are built to hijack attention. Infinite feeds, algorithmic triggers, and shallow soundbites are poisonous to real learning.</p>
-            <p class="about-text" data-translate-key="about_p2">I built Krishnaite as a sanctuary for builders. A minimalist, distraction-free harbor where long-form technical guides are valued, where we study actual source code, and where engineering is treated with the focus, devotion, and calm it deserves."</p>
-            <div class="about-signature">
-              <strong data-translate-key="about_signature_role">Acharya / Founder</strong>
-              <span data-translate-key="about_signature_sub">Lead Systems Architect</span>
+    <!-- About / Founder Section -->
+    <section id="about" class="landing-about" style="padding: 100px 0; background: var(--bg-card); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+      <div class="landing-container" style="max-width: 960px;">
+        <div style="display: grid; grid-template-columns: 280px 1fr; gap: 48px; align-items: start;" class="about-grid-wrapper">
+          <div style="text-align: center;" class="about-avatar-col">
+            <div style="width: 180px; height: 180px; border-radius: 50%; overflow: hidden; margin: 0 auto 16px auto; border: 3px solid var(--border); box-shadow: var(--shadow-sm);">
+              <img src="assets/founder.png" alt="Founder" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+            <strong style="font-size: 16px; font-weight: 700; color: var(--text-primary); display: block;">Harshita</strong>
+            <span style="font-size: 13px; color: var(--text-muted); display: block;">Founder & Lead Architect</span>
+          </div>
+          
+          <div style="display: flex; flex-direction: column; gap: 20px;" class="about-letter-col">
+            <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--primary); letter-spacing: 1.5px;">A Letter from the Founder</span>
+            <h2 style="font-family: var(--font-display); font-size: 32px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.8px; margin: 0;">Building a sanctuary for software engineering.</h2>
+            <div style="font-size: 15px; color: var(--text-secondary); line-height: 1.75; display: flex; flex-direction: column; gap: 16px;">
+              <p>Modern platforms are built to hijack attention. Infinite scroll, clickbait thumbnails, and shallow tutorials are poisonous to genuine mastery. Real engineering is not learned in 30-second soundbites.</p>
+              <p>I built <strong>Krishnaite Academy</strong> as a sanctuary. A calm, minimalist harbor where long-form architectural breakdowns, code reviews, and structured roadmaps are valued. It is a space designed specifically for software builders who want to study deep concepts without distraction.</p>
+            </div>
+            <div style="margin-top: 12px; border-top: 1px solid var(--border); padding-top: 20px; font-style: italic; color: var(--text-muted); font-size: 14px;">
+              Sincerely,<br>
+              <span style="font-family: var(--font-display); font-weight: 700; font-style: normal; color: var(--text-primary); font-size: 16px; margin-top: 6px; display: inline-block;">Harshita</span>
             </div>
           </div>
         </div>
@@ -442,9 +546,97 @@
       }
     }
 
+    async function loadLatestContent() {
+      try {
+        const [postsRes, roadmapsRes, resourcesRes] = await Promise.all([
+          client.from("posts").select("id, title, community").order("published_at", { ascending: false }).limit(3),
+          client.from("roadmaps").select("id, title, difficulty").order("published_at", { ascending: false }).limit(3),
+          client.from("resources").select("id, title, type").limit(3)
+        ]);
+
+        const articles = postsRes.data || [];
+        const roadmaps = roadmapsRes.data || [];
+        const resources = resourcesRes.data || [];
+
+        renderLatestCol("latest-articles-container", articles, item => `
+          <div class="card" style="padding: 14px; cursor: pointer; transition: var(--transition);" onclick="openSignInModal()">
+            <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--primary); letter-spacing: 0.5px;">#${item.community}</span>
+            <h4 style="font-size: 13.5px; font-weight: 600; margin: 4px 0 0 0; color: var(--text-primary); line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.title}</h4>
+          </div>
+        `);
+
+        renderLatestCol("latest-roadmaps-container", roadmaps, item => `
+          <div class="card" style="padding: 14px; cursor: pointer; transition: var(--transition);" onclick="openSignInModal()">
+            <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">${item.difficulty}</span>
+            <h4 style="font-size: 13.5px; font-weight: 600; margin: 4px 0 0 0; color: var(--text-primary); line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.title}</h4>
+          </div>
+        `);
+
+        renderLatestCol("latest-resources-container", resources, item => `
+          <div class="card" style="padding: 14px; cursor: pointer; transition: var(--transition);" onclick="openSignInModal()">
+            <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--primary); letter-spacing: 0.5px;">${item.type}</span>
+            <h4 style="font-size: 13.5px; font-weight: 600; margin: 4px 0 0 0; color: var(--text-primary); line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.title}</h4>
+          </div>
+        `);
+      } catch (err) {
+        console.warn("Failed to load latest content:", err);
+        fallbackLatestContent();
+      }
+    }
+
+    function renderLatestCol(containerId, list, templateFn) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      if (!list || list.length === 0) {
+        fallbackLatestContent();
+        return;
+      }
+      container.innerHTML = list.map(templateFn).join("");
+    }
+
+    function fallbackLatestContent() {
+      const fallbackArticles = [
+        { title: "Building a Production-Grade Markdown Compiler", community: "free" },
+        { title: "Rust Concurrency: Mastering Mutexes and Channels", community: "explorer" },
+        { title: "Database Architecture: Custom Vector Index Tuning", community: "pro" }
+      ];
+      const fallbackRoadmaps = [
+        { title: "Programming Foundations Roadmap", difficulty: "Beginner" },
+        { title: "Advanced Systems Architect Roadmap", difficulty: "Advanced" },
+        { title: "Web Architecture & Concurrency Roadmap", difficulty: "Intermediate" }
+      ];
+      const fallbackResources = [
+        { title: "Complete Boilerplate configurations", type: "boilerplate" },
+        { title: "Standard Member Tag CSS Templates", type: "guide" },
+        { title: "Memory Allocation Cheatsheets", type: "cheatsheet" }
+      ];
+
+      renderLatestCol("latest-articles-container", fallbackArticles, item => `
+        <div class="card" style="padding: 14px; cursor: pointer; transition: var(--transition);" onclick="openSignInModal()">
+          <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--primary); letter-spacing: 0.5px;">#${item.community}</span>
+          <h4 style="font-size: 13.5px; font-weight: 600; margin: 4px 0 0 0; color: var(--text-primary); line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.title}</h4>
+        </div>
+      `);
+
+      renderLatestCol("latest-roadmaps-container", fallbackRoadmaps, item => `
+        <div class="card" style="padding: 14px; cursor: pointer; transition: var(--transition);" onclick="openSignInModal()">
+          <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">${item.difficulty}</span>
+          <h4 style="font-size: 13.5px; font-weight: 600; margin: 4px 0 0 0; color: var(--text-primary); line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.title}</h4>
+        </div>
+      `);
+
+      renderLatestCol("latest-resources-container", fallbackResources, item => `
+        <div class="card" style="padding: 14px; cursor: pointer; transition: var(--transition);" onclick="openSignInModal()">
+          <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--primary); letter-spacing: 0.5px;">${item.type}</span>
+          <h4 style="font-size: 13.5px; font-weight: 600; margin: 4px 0 0 0; color: var(--text-primary); line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.title}</h4>
+        </div>
+      `);
+    }
+
     // On load check
     document.addEventListener("DOMContentLoaded", async () => {
       loadMemberCount();
+      loadLatestContent();
       const { data: { session } } = await client.auth.getSession();
       if (session) {
         localStorage.setItem("userLoggedIn", "true");

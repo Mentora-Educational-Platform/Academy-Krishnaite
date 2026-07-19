@@ -148,12 +148,6 @@ async function loadState() {
     if (dbProfile.role === "founder") {
       state.isFounder = true;
     }
-
-    // Restore user language preference (keep default English unless explicitly set in session)
-    if (dbProfile.preferred_language && sessionStorage.getItem("language_selected") === "true") {
-      TranslationService.currentLanguage = dbProfile.preferred_language;
-      localStorage.setItem("preferred_language", dbProfile.preferred_language);
-    }
   }
 
   if (!state.profiles) state.profiles = {};
@@ -222,6 +216,7 @@ async function loadState() {
   } catch (err) {
     console.warn("Could not sync with Supabase tables, using LocalStorage fallback:", err);
   }
+  saveState();
 }
 
 function saveState() {
@@ -2273,7 +2268,6 @@ window.submitFounderAsset = async function(e) {
 // --- 9. STARTUP ---
 document.addEventListener("DOMContentLoaded", async () => {
   await loadState();
-  TranslationService.localizeUI();
   updateUserInterfaceElements();
   initNavigation();
   renderActiveView();

@@ -508,10 +508,10 @@
 
       if (authMode === "signup") {
         authSubmitBtn.disabled = true;
-        authSubmitBtn.textContent = TranslationService.dictionary[TranslationService.currentLanguage].creating_account || "Creating Account...";
+        authSubmitBtn.textContent = "Creating Account...";
         const { data, error } = await client.auth.signUp({ email, password });
         authSubmitBtn.disabled = false;
-        authSubmitBtn.textContent = TranslationService.dictionary[TranslationService.currentLanguage].auth_btn_signup || "Sign Up";
+        authSubmitBtn.textContent = "Sign Up";
 
         if (error) {
           authError.textContent = error.message;
@@ -524,15 +524,15 @@
           authMode = "signin";
           handleAuthSuccess(email);
         } else {
-          alert(TranslationService.dictionary[TranslationService.currentLanguage].confirm_email_msg || "Sign up successful! Please check your email for the confirmation link, then Sign In.");
+          alert("Sign up successful! Please check your email for the confirmation link, then Sign In.");
           setAuthMode("signin");
         }
       } else {
         authSubmitBtn.disabled = true;
-        authSubmitBtn.textContent = TranslationService.dictionary[TranslationService.currentLanguage].signing_in || "Signing In...";
+        authSubmitBtn.textContent = "Signing In...";
         const { data, error } = await client.auth.signInWithPassword({ email, password });
         authSubmitBtn.disabled = false;
-        authSubmitBtn.textContent = TranslationService.dictionary[TranslationService.currentLanguage].auth_btn_signin || "Sign In";
+        authSubmitBtn.textContent = "Sign In";
 
         if (error) {
           authError.textContent = error.message;
@@ -546,18 +546,6 @@
 
     function handleAuthSuccess(email) {
       localStorage.setItem("userLoggedIn", "true");
-      let role = (email === "founder@krishnaite.dev") ? "founder" : "free";
-
-      const stored = localStorage.getItem("krishnaite_state");
-      let state = {};
-      if (stored) {
-        try { state = JSON.parse(stored); } catch(err) {}
-      }
-      state.currentUserRole = role;
-      state.userLoggedIn = true;
-      state.activeView = "dashboard";
-      localStorage.setItem("krishnaite_state", JSON.stringify(state));
-      
       closeSignInModal();
       window.location.href = "dashboard.html";
     }

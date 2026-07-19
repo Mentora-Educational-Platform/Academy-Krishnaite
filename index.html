@@ -95,6 +95,10 @@
           <a href="#membership" class="btn-secondary-large" data-translate-key="hero_action_tiers">Explore Tiers</a>
         </div>
         
+        <div class="hero-member-count" style="margin-top: 24px; font-size: 14.5px; font-weight: 600; color: var(--text-secondary); display: inline-flex; align-items: center; gap: 6px; padding: 6px 16px; background: var(--bg-hover); border-radius: 20px; border: 1.5px solid var(--border); box-shadow: var(--shadow-xs);">
+          <span>👥</span> <span id="community-member-count">—</span> <span>Krishnaites</span>
+        </div>
+        
         <div class="hero-trusted-by">
           <span data-translate-key="hero_trusted">Trusted by modern builders worldwide</span>
           <div class="trusted-logos">
@@ -422,8 +426,25 @@
       document.body.style.overflow = "";
     }
 
+    async function loadMemberCount() {
+      try {
+        const { count, error } = await client
+          .from("profiles")
+          .select("id", { count: "exact", head: true });
+        
+        const countEl = document.getElementById("community-member-count");
+        if (countEl) {
+          countEl.textContent = (!error && count !== null) ? count : "—";
+        }
+      } catch (err) {
+        const countEl = document.getElementById("community-member-count");
+        if (countEl) countEl.textContent = "—";
+      }
+    }
+
     // On load check
     document.addEventListener("DOMContentLoaded", async () => {
+      loadMemberCount();
       const { data: { session } } = await client.auth.getSession();
       if (session) {
         localStorage.setItem("userLoggedIn", "true");

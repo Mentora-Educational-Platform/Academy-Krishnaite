@@ -223,6 +223,22 @@ function saveState() {
   localStorage.setItem("krishnaite_state", JSON.stringify(state));
 }
 
+async function loadMemberCount() {
+  try {
+    const { count, error } = await client
+      .from("profiles")
+      .select("id", { count: "exact", head: true });
+    
+    const countEl = document.getElementById("community-member-count");
+    if (countEl) {
+      countEl.textContent = (!error && count !== null) ? count : "—";
+    }
+  } catch (err) {
+    const countEl = document.getElementById("community-member-count");
+    if (countEl) countEl.textContent = "—";
+  }
+}
+
 function seedState() {
   state.posts = [...INITIAL_POSTS];
   state.resources = [...INITIAL_RESOURCES];
@@ -643,8 +659,15 @@ function renderDashboard() {
 
   mainViewContent.innerHTML = `
     <div class="greeting-section">
-      <h1 class="greeting-title">Radhe Radhe, ${user.name.split(' ')[0]} 👋</h1>
-      <p class="greeting-subtitle">Welcome back. Keep learning, keep building, stay distraction-free.</p>
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+        <div>
+          <h1 class="greeting-title">Radhe Radhe, ${user.name.split(' ')[0]} 👋</h1>
+          <p class="greeting-subtitle">Welcome back. Keep learning, keep building, stay distraction-free.</p>
+        </div>
+        <div class="dashboard-member-count" style="font-size: 13.5px; font-weight: 600; color: var(--text-secondary); display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow-xs);">
+          <span>👥</span> <span id="community-member-count">—</span> <span>Krishnaites</span>
+        </div>
+      </div>
     </div>
 
     <div class="dashboard-grid">
@@ -760,6 +783,7 @@ function renderDashboard() {
       </div>
     </div>
   `;
+  loadMemberCount();
 }
 
 window.navigateToView = function(view) {

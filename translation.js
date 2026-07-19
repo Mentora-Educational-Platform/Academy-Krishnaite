@@ -498,59 +498,80 @@ window.toggleTranslatePost = async function (postId, btn, event) {
   const card = document.getElementById(postId) || document.querySelector(`.reading-article-container`);
   if (!card) return;
 
-  const titleEl = card.querySelector(".section-card-title, .reading-article-title");
-  const bodyEl = card.querySelector(".post-body, .reading-text-content");
-  const excerptEl = card.querySelector("p[style*='italic']");
+  const actionsBar = card.querySelector(".post-actions-bar");
+  if (!actionsBar) return;
 
   const isTranslated = btn.getAttribute("data-translated") === "true";
 
   if (isTranslated) {
-    if (titleEl) titleEl.innerHTML = post.title;
-    if (bodyEl) bodyEl.innerHTML = post.body;
-    if (excerptEl && post.excerpt) excerptEl.innerHTML = post.excerpt;
-
-    const badge = card.querySelector(".translation-badge");
-    if (badge) badge.remove();
+    const translationContainer = card.querySelector(".post-translation-container");
+    if (translationContainer) translationContainer.remove();
 
     btn.setAttribute("data-translated", "false");
-    btn.innerHTML = `<i data-lucide="globe" style="width: 14px; height: 14px; margin-right: 4px; display: inline-block; vertical-align: middle;"></i> Translate`;
+    btn.innerHTML = `<i data-lucide="globe" style="width: 16px; height: 16px;"></i> <span>Translate</span>`;
     if (window.lucide) window.lucide.createIcons();
     return;
   }
 
   btn.disabled = true;
-  btn.innerHTML = `<i data-lucide="loader" class="animate-spin" style="width: 14px; height: 14px; margin-right: 4px; display: inline-block; vertical-align: middle;"></i> Translating...`;
+  btn.innerHTML = `<i data-lucide="loader" class="animate-spin" style="width: 16px; height: 16px; margin-right: 4px; display: inline-block; vertical-align: middle;"></i> <span>Translating...</span>`;
   if (window.lucide) window.lucide.createIcons();
 
   try {
-    const targetLang = TranslationService.currentLanguage;
-    const [translatedTitle, translatedBody, translatedExcerpt] = await Promise.all([
+    const targetLang = TranslationService.currentLanguage === "en" ? "te" : TranslationService.currentLanguage;
+    const langNames = {
+      en: "English",
+      te: "Telugu",
+      hi: "Hindi",
+      ta: "Tamil",
+      kn: "Kannada",
+      ml: "Malayalam",
+      mr: "Marathi",
+      bn: "Bengali",
+      gu: "Gujarati",
+      pa: "Punjabi"
+    };
+    const targetLangName = langNames[targetLang] || "Telugu";
+
+    const [translatedTitle, translatedBody] = await Promise.all([
       TranslationService.translateContent(post.title, targetLang),
-      translateHTMLBody(post.body, targetLang),
-      post.excerpt ? TranslationService.translateContent(post.excerpt, targetLang) : Promise.resolve("")
+      translateHTMLBody(post.body, targetLang)
     ]);
 
-    if (titleEl) titleEl.innerHTML = translatedTitle;
-    if (bodyEl) bodyEl.innerHTML = translatedBody;
-    if (excerptEl && post.excerpt) excerptEl.innerHTML = translatedExcerpt;
-
-    // Append translation badge
-    const badgeHTML = `<div class="translation-badge" style="display: inline-block; font-size: 11px; background: var(--primary-light); color: var(--primary); padding: 2px 8px; border-radius: 12px; margin: 8px 0; font-weight: 500;"><i data-lucide="check" style="width: 10px; height: 10px; display: inline; vertical-align: middle;"></i> Translated Automatically</div>`;
-    if (card.querySelector(".post-actions-bar")) {
-      card.querySelector(".post-actions-bar").insertAdjacentHTML("beforebegin", badgeHTML);
-    } else if (card.querySelector(".reading-body-wrap")) {
-      card.querySelector(".reading-body-wrap").insertAdjacentHTML("beforeend", badgeHTML);
+    if (translatedTitle === post.title && translatedBody === post.body) {
+      throw new Error("Translation unavailable.");
     }
 
+    const translationHTML = `
+      <div class="post-translation-container" style="margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--border); margin-bottom: 16px;">
+        <div style="font-size: 12px; color: var(--primary); font-weight: 700; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+          <i data-lucide="globe" style="width: 14px; height: 14px;"></i> Translated (${targetLangName})
+        </div>
+        <h3 class="translated-title" style="font-size: 16px; font-weight: 700; margin-bottom: 8px; color: var(--text-primary);">${translatedTitle}</h3>
+        <div class="translated-body" style="font-size: 14px; color: var(--text-secondary); line-height: 1.65;">${translatedBody}</div>
+      </div>
+    `;
+
+    // Remove any pre-existing translation container just in case
+    const oldContainer = card.querySelector(".post-translation-container");
+    if (oldContainer) oldContainer.remove();
+
+    actionsBar.insertAdjacentHTML("beforebegin", translationHTML);
+
     btn.setAttribute("data-translated", "true");
-    btn.innerHTML = `<i data-lucide="rotate-ccw" style="width: 14px; height: 14px; margin-right: 4px; display: inline-block; vertical-align: middle;"></i> Show Original`;
+    btn.innerHTML = `<i data-lucide="rotate-ccw" style="width: 16px; height: 16px;"></i> <span>Show Original</span>`;
   } catch (err) {
-    alert("Translation unavailable. Try again.");
-    btn.innerHTML = `<i data-lucide="globe" style="width: 14px; height: 14px; margin-right: 4px; display: inline-block; vertical-align: middle;"></i> Translate`;
+    console.error(err);
+    alert("Translation unavailable.");
+    btn.innerHTML = `<i data-lucide="globe" style="width: 16px; height: 16px;"></i> <span>Translate</span>`;
   } finally {
     btn.disabled = false;
     if (window.lucide) window.lucide.createIcons();
   }
+};
+
+window.selectLang = function (langCode) {
+  TranslationService.setLanguage(langCode);
 };
 
 // Global toggle handler for comment & reply translation triggers

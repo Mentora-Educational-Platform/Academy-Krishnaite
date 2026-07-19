@@ -897,12 +897,10 @@ function renderCommunityFeed(communityKey) {
               <span>Share</span>
             </button>
 
-            ${TranslationService.shouldShowTranslate(post.title + ' ' + post.body, post.language || 'en') ? `
-              <button class="action-btn translate-btn" onclick="toggleTranslatePost('${post.id}', this, event)" data-translated="false">
-                <i data-lucide="globe" style="width: 16px; height: 16px;"></i>
-                <span>Translate</span>
-              </button>
-            ` : ''}
+            <button class="action-btn translate-btn" onclick="toggleTranslatePost('${post.id}', this, event)" data-translated="false">
+              <i data-lucide="globe" style="width: 16px; height: 16px;"></i>
+              <span>Translate</span>
+            </button>
           </div>
         </div>
       `;
@@ -1056,6 +1054,11 @@ function renderReadingMode(postId) {
           <button class="action-btn" onclick="sharePost('${post.id}')">
             <i data-lucide="share-2" style="width: 16px; height: 16px;"></i>
             <span>Share</span>
+          </button>
+
+          <button class="action-btn translate-btn" onclick="toggleTranslatePost('${post.id}', this, event)" data-translated="false">
+            <i data-lucide="globe" style="width: 16px; height: 16px;"></i>
+            <span>Translate</span>
           </button>
         </div>
 

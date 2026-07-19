@@ -71,8 +71,16 @@ img { display: block; max-width: 100%; }
   box-shadow: var(--shadow-xs);
   padding: 24px;
   transition: var(--transition);
+  min-width: 0;
 }
 .card:hover { box-shadow: var(--shadow-sm); }
+
+.card-header-padding {
+  padding: 20px 24px;
+}
+.card-content-padding {
+  padding: 24px;
+}
 
 .btn-primary {
   background: var(--primary);
@@ -1894,7 +1902,7 @@ input, select, textarea {
   .content-view {
     padding: 16px;
   }
-  .card {
+  .card, .post-card {
     padding: 16px;
   }
   .continue-learning-item {
@@ -2095,10 +2103,19 @@ input, select, textarea {
   .sidebar.open { transform: translateX(0); box-shadow: var(--shadow-lg); }
   .main-wrapper { margin-left: 0; }
   .menu-toggle-btn { display: flex; }
-  .search-input { width: 200px; }
-  .search-input:focus { width: 200px; }
-  .content-view { padding: 20px; }
-  .reading-body-wrap { padding: 28px 24px; }
+  .search-input { width: 160px; }
+  .search-input:focus { width: 180px; }
+  .content-view { padding: 16px; }
+  .card-header-padding { padding: 14px 16px; }
+  .card-content-padding { padding: 16px; }
+  .pinned-announcement { padding: 14px; }
+  .pinned-footer { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .greeting-section { margin-bottom: 28px; }
+  .greeting-title { font-size: 22px; }
+  .greeting-subtitle { font-size: 13px; }
+  .dashboard-grid, .dashboard-main, .dashboard-sidebar { gap: 20px; }
+  .continue-learning-item { flex-wrap: wrap; gap: 12px; }
+  .reading-body-wrap { padding: 24px 16px; }
   .landing-nav-links { display: none; }
   .hero-title { font-size: 32px; }
   .about-card { flex-direction: column; }

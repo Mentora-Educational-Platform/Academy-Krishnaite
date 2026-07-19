@@ -652,13 +652,13 @@ function renderDashboard() {
         
         <!-- Latest Announcement -->
         <div class="card" style="padding: 0; overflow: hidden;">
-          <div style="padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;">
+          <div class="card-header-padding" style="border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;">
             <span class="section-card-title" style="margin-bottom: 0;">
               <i data-lucide="megaphone" style="color: var(--primary);"></i> Pinned Announcement
             </span>
           </div>
           
-          <div style="padding: 24px;">
+          <div class="card-content-padding">
             ${latestAnnouncement ? `
               <div class="pinned-announcement" style="cursor: pointer;" onclick="openArticleRead('${latestAnnouncement.id}')">
                 <div class="pinned-badge">

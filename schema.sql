@@ -278,3 +278,6 @@ create policy "Only founders can update/delete posts"
       where id = auth.uid() and role = 'founder'
     )
   );
+
+-- Add preferred_language column to profiles table
+alter table public.profiles add column if not exists preferred_language text default 'en';

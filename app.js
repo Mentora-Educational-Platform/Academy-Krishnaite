@@ -123,7 +123,7 @@ async function loadState() {
 
   // Self-healing: Ensure user profile is registered in Supabase database profiles table
   try {
-    const { data: profile } = await client.from("profiles").select("id, tier, role").eq("id", session.user.id).maybeSingle();
+    const { data: profile } = await client.from("profiles").select("id, tier, role, preferred_language").eq("id", session.user.id).maybeSingle();
     dbProfile = profile;
     if (!profile) {
       const defaultTier = userEmail === "founder@krishnaite.dev" ? "pro" : "free";
@@ -147,6 +147,12 @@ async function loadState() {
     // Keep founder privileges separately
     if (dbProfile.role === "founder") {
       state.isFounder = true;
+    }
+
+    // Restore user language preference (keep default English unless explicitly set in session)
+    if (dbProfile.preferred_language && sessionStorage.getItem("language_selected") === "true") {
+      TranslationService.currentLanguage = dbProfile.preferred_language;
+      localStorage.setItem("preferred_language", dbProfile.preferred_language);
     }
   }
 
@@ -413,6 +419,10 @@ function renderActiveView() {
   
   if (typeof lucide !== 'undefined') {
     lucide.createIcons();
+  }
+
+  if (window.TranslationService) {
+    TranslationService.localizeUI();
   }
 }
 
@@ -891,6 +901,13 @@ function renderCommunityFeed(communityKey) {
               <i data-lucide="share-2" style="width: 16px; height: 16px;"></i>
               <span>Share</span>
             </button>
+
+            ${TranslationService.shouldShowTranslate(post.title + ' ' + post.body, post.language || 'en') ? `
+              <button class="action-btn translate-btn" onclick="toggleTranslatePost('${post.id}', this, event)" data-translated="false">
+                <i data-lucide="globe" style="width: 16px; height: 16px;"></i>
+                <span>Translate</span>
+              </button>
+            ` : ''}
           </div>
         </div>
       `;
@@ -952,11 +969,12 @@ function renderReadingMode(postId) {
                 <div class="comment-bubble">
                   <div class="comment-author-name">${reply.author.name} <span class="role-badge" style="font-size: 8px;">${reply.author.role}</span></div>
                   <div class="comment-text">${reply.text}</div>
-                </div>
-                <div class="comment-actions">
+                               <div class="comment-actions">
                   <span class="comment-action-link ${rLiked ? 'active' : ''}" onclick="likeComment('${post.id}', '${comment.id}', true, '${reply.id}')">
                     Like${reply.likes.length > 0 ? ` (${reply.likes.length})` : ''}
                   </span>
+                  <span>&bull;</span>
+                  <span class="comment-action-link" onclick="toggleTranslateComment('${post.id}', '${comment.id}', '${reply.id}', this)" data-translated="false">Translate</span>
                 </div>
               </div>
             </div>
@@ -979,6 +997,8 @@ function renderReadingMode(postId) {
                 </span>
                 <span>&bull;</span>
                 <span class="comment-action-link" onclick="focusReplyInput('${post.id}', '${comment.id}')">Reply</span>
+                <span>&bull;</span>
+                <span class="comment-action-link" onclick="toggleTranslateComment('${post.id}', '${comment.id}', '', this)" data-translated="false">Translate</span>
               </div>
             </div>
           </div>
@@ -1090,13 +1110,18 @@ function renderRoadmaps() {
     });
 
     roadmapsHTML += `
-      <div class="card roadmap-card">
+      <div class="card roadmap-card" data-roadmap-id="${roadmap.id}">
         <div class="roadmap-header-row">
           <div class="roadmap-info-col">
             <h2 class="section-card-title" style="margin-bottom: 4px;">${roadmap.title}</h2>
-            <div class="roadmap-meta-badges">
+            <div class="roadmap-meta-badges" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
               <span class="roadmap-meta-badge">${roadmap.difficulty}</span>
               <span class="roadmap-meta-badge"><i data-lucide="clock" style="width: 10px; height: 10px; display: inline; vertical-align: middle;"></i> ${roadmap.duration}</span>
+              ${TranslationService.shouldShowTranslate(roadmap.title, 'en') ? `
+                <button class="roadmap-translate-btn" onclick="event.stopPropagation(); toggleTranslateRoadmap('${roadmap.id}', this)" data-translated="false" style="background: none; border: none; font-size: 11px; font-weight: 600; color: var(--primary); cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                  <i data-lucide="globe" style="width: 12px; height: 12px;"></i> Translate
+                </button>
+              ` : ''}
             </div>
           </div>
           
@@ -1215,6 +1240,11 @@ function renderResources() {
             <p class="resource-desc">${res.desc}</p>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:auto; font-size:11px; color:var(--text-muted); margin-bottom:12px;">
               <span class="role-badge" style="font-size:9px;">${(res.visibility || 'free').toUpperCase()}</span>
+              ${TranslationService.shouldShowTranslate(res.title + ' ' + res.desc, 'en') ? `
+                <button class="resource-translate-btn" onclick="event.stopPropagation(); toggleTranslateResource('${res.id}', this)" data-translated="false" style="background: none; border: none; font-size: 11px; font-weight: 600; color: var(--primary); cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                  <i data-lucide="globe" style="width: 12px; height: 12px;"></i> Translate
+                </button>
+              ` : ''}
             </div>
             <button class="resource-download-btn" onclick="downloadResourceFile('${res.id}')">
               <i data-lucide="download" style="width: 14px; height: 14px;"></i> Access Resource
@@ -1515,18 +1545,47 @@ function renderProfile() {
   }
 
   mainViewContent.innerHTML = `
-    <div class="card profile-card">
-      <img src="${user.avatar}" alt="${user.name}" class="profile-avatar-large">
-      <div class="profile-details-main">
-        <div class="profile-name-row">
-          <h2 class="profile-name">${user.name}</h2>
-          <span class="role-badge" style="padding: 3px 10px; font-size: 11px;">${user.role === 'founder' ? 'founder' : user.tier + ' tier'}</span>
-        </div>
-        <div class="profile-join-date">
-          <i data-lucide="calendar" style="width: 14px; height: 14px; display: inline; vertical-align: middle;"></i> Joined ${user.joinDate}
+    <div class="card profile-card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+      <div style="display: flex; align-items: center; gap: 20px;">
+        <img src="${user.avatar}" alt="${user.name}" class="profile-avatar-large">
+        <div class="profile-details-main">
+          <div class="profile-name-row">
+            <h2 class="profile-name">${user.name}</h2>
+            <span class="role-badge" style="padding: 3px 10px; font-size: 11px;">${user.role === 'founder' ? 'founder' : user.tier + ' tier'}</span>
+          </div>
+          <div class="profile-join-date">
+            <i data-lucide="calendar" style="width: 14px; height: 14px; display: inline; vertical-align: middle;"></i> Joined ${user.joinDate}
+          </div>
         </div>
       </div>
+
+      <!-- Preferred Language Settings block -->
+      <div class="profile-settings-block" style="min-width: 220px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px; box-shadow: var(--shadow-sm);">
+        <label style="display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 8px;" data-translate-key="preferred_lang">Preferred Language</label>
+        <select onchange="selectLang(this.value)" class="current-lang-select" style="width: 100%; height: 40px; padding: 8px 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 14px; font-weight: 500; outline: none; cursor: pointer;">
+          <option value="en">English</option>
+          <option value="te">Telugu (తెలుగు)</option>
+          <option value="hi">Hindi (हिन्दी)</option>
+          <option value="ta">Tamil (தமிழ்)</option>
+          <option value="kn">Kannada (ಕನ್ನಡ)</option>
+          <option value="ml">Malayalam (മലയാളം)</option>
+          <option value="mr">Marathi (मराठी)</option>
+          <option value="bn">Bengali (বাংলা)</option>
+          <option value="gu">Gujarati (ગુજરાતી)</option>
+          <option value="pa">Punjabi (ਪੰਜਾਬੀ)</option>
+        </select>
+      </div>
     </div>
+
+    <script>
+      // Automatically update selection to active language preference
+      setTimeout(() => {
+        const selectElement = document.querySelector(".profile-settings-block .current-lang-select");
+        if (selectElement) {
+          selectElement.value = TranslationService.currentLanguage;
+        }
+      }, 50);
+    </script>
     
     <div class="profile-tabs">
       <span class="profile-tab-item ${activeProfileTab === 'saved' ? 'active' : ''}" onclick="setProfileTab('saved')">Saved Articles</span>
@@ -2214,7 +2273,18 @@ window.submitFounderAsset = async function(e) {
 // --- 9. STARTUP ---
 document.addEventListener("DOMContentLoaded", async () => {
   await loadState();
+  TranslationService.localizeUI();
   updateUserInterfaceElements();
   initNavigation();
   renderActiveView();
+
+  // Listen to language updates globally and re-render views and update selector values dynamically
+  document.addEventListener("languageChanged", (e) => {
+    TranslationService.localizeUI();
+    const selectors = document.querySelectorAll(".current-lang-select");
+    selectors.forEach(sel => {
+      sel.value = e.detail;
+    });
+    renderActiveView();
+  });
 });

@@ -565,6 +565,13 @@ async function simulateUpgrade(viewName) {
     const { data: { session } } = await client.auth.getSession();
     if (!session) throw new Error("Please log in to upgrade.");
 
+    // TODO: Replace Razorpay Subscription flow with Krishnaite one-time Payment Page flow.
+
+    // --- SUBSCRIPTION FLOW DISABLED (step 1 of payment migration) ---
+    // The following block created a Razorpay Subscription and opened the checkout.
+    // It is preserved as a comment for reference and will be replaced in the next step.
+
+    /*
     // Load Razorpay Script dynamically if not already available
     if (!window.Razorpay) {
       const script = document.createElement('script');
@@ -624,7 +631,6 @@ async function simulateUpgrade(viewName) {
           const verifyData = await verifyRes.json();
           if (verifyData.success) {
             alert(`🎉 Payment verified successfully! Your account has been upgraded to ${selectedPlan.toUpperCase()}.`);
-            // Refresh profiles from Supabase and render
             await loadState();
             renderActiveView();
           } else {
@@ -658,6 +664,15 @@ async function simulateUpgrade(viewName) {
     console.log("RAZORPAY OPTIONS", options);
     const rzp = new window.Razorpay(options);
     rzp.open();
+    */
+    // --- END DISABLED SUBSCRIPTION FLOW ---
+
+    // TODO: After successful Razorpay Payment Page payment,
+    // automatically upgrade the user's Krishnaite membership.
+
+    // Step 2: Redirect to Krishnaite one-time Payment Page
+    window.location.href = "https://rzp.io/rzp/MCixp29";
+
   } catch (err) {
     alert("Error: " + err.message);
     if (submitBtn) {

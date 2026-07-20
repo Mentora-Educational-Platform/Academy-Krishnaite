@@ -399,3 +399,24 @@ create policy "Owners and founders can update comments"
       )
     )
   );
+
+-- ====================================================================
+-- MIGRATION: Payment tracking columns for profiles
+-- (Required by razorpay-webhook and verify-payment functions)
+-- Run once. Safe to re-run (alter table ... if not exists).
+-- ====================================================================
+
+alter table public.profiles
+  add column if not exists payment_provider    text    default null,
+  add column if not exists subscription_status text    default null,
+  add column if not exists subscription_id     text    default null,
+  add column if not exists payment_id          text    default null,
+  add column if not exists payment_page        text    default null,
+  add column if not exists payment_date        timestamp with time zone default null;
+
+-- Unique constraint: one processed payment_id per profile (idempotency guard)
+-- Drop first in case schema is re-run, then recreate.
+drop index if exists idx_profiles_payment_id;
+create unique index if not exists idx_profiles_payment_id
+  on public.profiles (payment_id)
+  where payment_id is not null;

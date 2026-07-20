@@ -333,3 +333,69 @@ create policy "Authenticated users can insert their own likes"
 create policy "Users can delete their own likes"
   on public.post_likes for delete
   using (auth.role() = 'authenticated' and auth.uid() = user_id);
+
+-- ============================================================
+-- MIGRATION: post_comments — Relational comment + reply system
+-- ============================================================
+
+create table if not exists public.post_comments (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid references public.posts(id) on delete cascade not null,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  parent_comment_id uuid references public.post_comments(id) on delete cascade,
+  content text not null,
+  created_at timestamp with time zone default now() not null,
+  updated_at timestamp with time zone default now() not null,
+  is_edited boolean default false not null,
+  is_deleted boolean default false not null
+);
+
+-- Indexes for performance
+create index if not exists post_comments_post_id_idx on public.post_comments(post_id);
+create index if not exists post_comments_user_id_idx on public.post_comments(user_id);
+create index if not exists post_comments_parent_id_idx on public.post_comments(parent_comment_id);
+create index if not exists post_comments_created_at_idx on public.post_comments(created_at asc);
+
+-- Enable RLS
+alter table public.post_comments enable row level security;
+
+-- SELECT: Anyone can read comments
+create policy "Anyone can view post comments"
+  on public.post_comments for select
+  using (true);
+
+-- INSERT: Authenticated users can create their own comments
+create policy "Authenticated users can insert their own comments"
+  on public.post_comments for insert
+  with check (
+    auth.role() = 'authenticated'
+    and auth.uid() = user_id
+  );
+
+-- UPDATE: Owners can edit their own comment content/flags.
+--         Founders can soft-delete (set is_deleted=true) any comment.
+--         No physical DELETE is ever used — all "deletes" go through this policy.
+create policy "Owners and founders can update comments"
+  on public.post_comments for update
+  using (
+    auth.role() = 'authenticated'
+    and (
+      auth.uid() = user_id
+      or exists (
+        select 1 from public.profiles
+        where id = auth.uid()
+        and role = 'founder'
+      )
+    )
+  )
+  with check (
+    auth.role() = 'authenticated'
+    and (
+      auth.uid() = user_id
+      or exists (
+        select 1 from public.profiles
+        where id = auth.uid()
+        and role = 'founder'
+      )
+    )
+  );

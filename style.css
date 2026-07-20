@@ -1277,24 +1277,42 @@ img { display: block; max-width: 100%; }
 .editor-callout-icon { font-size: 20px; flex-shrink: 0; line-height: 1.4; }
 .editor-callout-text { font-size: 14px; color: var(--text-secondary); line-height: 1.7; }
 
-/* ── Comments ── */
-.comment-card { display: flex; gap: 10px; }
-.comment-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-.comment-content-container { flex: 1; }
-.comment-bubble {
-  background: var(--bg-hover);
-  border-radius: var(--radius-sm);
-  padding: 10px 14px;
+/* ── Comments — Relational System ── */
+
+/* Section header */
+.comments-header-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 14px;
+  margin-bottom: 24px;
 }
-.comment-author-name { font-size: 12.5px; font-weight: 600; margin-bottom: 4px; }
-.comment-text { font-size: 13.5px; color: var(--text-secondary); line-height: 1.55; }
-.comment-actions { display: flex; gap: 12px; margin-top: 6px; font-size: 11.5px; color: var(--text-muted); }
-.comment-action-link { cursor: pointer; font-weight: 600; transition: color 0.15s; }
-.comment-action-link:hover { color: var(--primary); }
-.comment-action-link.active { color: var(--primary); }
-.comment-input-area { display: flex; align-items: flex-start; gap: 10px; }
-.comment-field-wrapper { flex: 1; }
-.comment-textarea {
+.comments-section-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+.comments-count-badge {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-hover);
+  padding: 2px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+}
+
+/* Composer */
+.comment-composer {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.comment-composer-inner { flex: 1; }
+.comment-composer-textarea {
   width: 100%;
   padding: 10px 14px;
   background: var(--bg-hover);
@@ -1302,17 +1320,44 @@ img { display: block; max-width: 100%; }
   border-radius: var(--radius-sm);
   font-size: 13.5px;
   resize: none;
-  height: 80px;
+  min-height: 42px;
+  max-height: 180px;
+  overflow-y: auto;
   outline: none;
-  transition: var(--transition);
-  line-height: 1.5;
+  transition: border-color 0.2s, background 0.2s;
+  line-height: 1.55;
+  font-family: inherit;
+  display: block;
+  box-sizing: border-box;
 }
-.comment-textarea:focus { border-color: var(--primary); background: var(--bg-card); }
+.comment-composer-textarea:focus {
+  border-color: var(--primary);
+  background: var(--bg-card);
+}
+.comment-composer-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  justify-content: flex-end;
+  animation: fadeInUp 0.15s ease;
+}
+.comment-cancel-btn {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1.5px solid var(--border);
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.comment-cancel-btn:hover { color: var(--text-primary); border-color: var(--text-muted); }
 .comment-send-btn {
   background: var(--primary);
   color: #fff;
   border: none;
-  padding: 10px 18px;
+  padding: 7px 18px;
   border-radius: var(--radius-sm);
   font-size: 13px;
   font-weight: 600;
@@ -1321,6 +1366,133 @@ img { display: block; max-width: 100%; }
   white-space: nowrap;
 }
 .comment-send-btn:hover { background: var(--primary-hover); }
+
+/* Comment rows */
+.comment-row {
+  display: flex;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  animation: fadeInUp 0.2s ease;
+}
+.comment-row:last-child { border-bottom: none; }
+.comment-reply {
+  padding: 10px 0 10px 8px;
+  border-bottom: none;
+}
+.comment-reply-thread {
+  padding-left: 44px;
+  border-left: 2px solid var(--border);
+  margin-left: 16px;
+  margin-top: 4px;
+}
+.comment-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.comment-body { flex: 1; min-width: 0; }
+.comment-meta-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.comment-author-name { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.comment-role-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 20px;
+  letter-spacing: 0.3px;
+  text-transform: capitalize;
+}
+.comment-timestamp { font-size: 11.5px; color: var(--text-muted); }
+.comment-edited-badge {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+.comment-content {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  word-break: break-word;
+}
+.comment-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.comment-action-link {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.comment-action-link:hover { color: var(--primary); }
+.comment-delete-link:hover { color: #ef4444; }
+.comment-dot { font-size: 10px; color: var(--border); }
+
+/* Reply composer */
+.reply-composer {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0 4px;
+  animation: fadeInUp 0.15s ease;
+}
+
+/* Soft-deleted notice */
+.comment-deleted-notice {
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 8px 0;
+  font-style: italic;
+}
+
+/* Inline delete confirm */
+.delete-confirm-inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  animation: fadeInUp 0.15s ease;
+}
+
+/* Empty state */
+.comment-empty-state {
+  text-align: center;
+  padding: 40px 0 20px;
+}
+.comment-empty-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+.comment-empty-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Appear animation for new comments */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.comment-new-appear { animation: fadeInUp 0.2s ease; }
+
+/* Mobile */
+@media (max-width: 640px) {
+  .comment-reply-thread { padding-left: 28px; margin-left: 10px; }
+  .comment-composer { gap: 8px; }
+  .comment-composer .comment-avatar { width: 26px; height: 26px; }
+}
 
 /* ── Roadmaps ── */
 .roadmaps-header { margin-bottom: 28px; }

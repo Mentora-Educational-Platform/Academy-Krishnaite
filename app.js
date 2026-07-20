@@ -175,21 +175,76 @@ async function loadState() {
     const { data: postsData, error: postsErr } = await client.from("posts").select("*").order("created_at", { ascending: false });
     if (!postsErr && postsData) {
       const postIds = postsData.map(p => p.id);
+
+      // --- Fetch likes ---
       const { data: likesData } = await client.from("post_likes").select("post_id, user_id").in("post_id", postIds);
       const { data: { session } } = await client.auth.getSession();
       const currentUserId = session?.user?.id;
 
       const likeCounts = {};
       const userLiked = {};
-
       if (likesData) {
         likesData.forEach(like => {
           likeCounts[like.post_id] = (likeCounts[like.post_id] || 0) + 1;
-          if (currentUserId && like.user_id === currentUserId) {
-            userLiked[like.post_id] = true;
-          }
+          if (currentUserId && like.user_id === currentUserId) userLiked[like.post_id] = true;
         });
       }
+
+      // --- Fetch comments in a single bulk query, ordered oldest-first ---
+      const { data: commentsData } = await client
+        .from("post_comments")
+        .select("id, post_id, user_id, parent_comment_id, content, created_at, updated_at, is_edited, is_deleted")
+        .in("post_id", postIds)
+        .order("created_at", { ascending: true });
+
+      // Fetch author profiles for all commenters
+      const commenterIds = [...new Set((commentsData || []).map(c => c.user_id))];
+      let profilesMap = {};
+      if (commenterIds.length > 0) {
+        const { data: profilesData } = await client
+          .from("profiles")
+          .select("id, name, role")
+          .in("id", commenterIds);
+        if (profilesData) profilesData.forEach(p => { profilesMap[p.id] = p; });
+      }
+
+      // Assemble comments into per-post hierarchies
+      const commentsByPost = {};
+      if (commentsData) {
+        commentsData.forEach(c => {
+          if (!commentsByPost[c.post_id]) commentsByPost[c.post_id] = [];
+          const profile = profilesMap[c.user_id] || {};
+          commentsByPost[c.post_id].push({
+            id: c.id,
+            postId: c.post_id,
+            userId: c.user_id,
+            parentId: c.parent_comment_id || null,
+            content: c.content,
+            createdAt: c.created_at,
+            updatedAt: c.updated_at,
+            isEdited: c.is_edited,
+            isDeleted: c.is_deleted,
+            author: {
+              name: profile.name || "Member",
+              role: profile.role || "member",
+              avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || 'M')}&background=6c63ff&color=fff&size=64`
+            },
+            replies: []
+          });
+        });
+      }
+
+      // Build top-level + replies tree per post
+      const buildCommentTree = (flat) => {
+        const map = {};
+        flat.forEach(c => { map[c.id] = c; c.replies = []; });
+        const roots = [];
+        flat.forEach(c => {
+          if (c.parentId && map[c.parentId]) map[c.parentId].replies.push(c);
+          else roots.push(c);
+        });
+        return roots;
+      };
 
       state.posts = postsData.map(p => ({
         id: p.id,
@@ -205,7 +260,8 @@ async function loadState() {
         likesCount: likeCounts[p.id] || 0,
         likedByCurrentUser: !!userLiked[p.id],
         likePending: false,
-        comments: p.comments || [],
+        comments: buildCommentTree(commentsByPost[p.id] || []),
+        commentsCount: (commentsByPost[p.id] || []).length,
         createdAt: p.created_at,
         author: { name: "Harshita", email: "founder@krishnaite.dev", avatar: "assets/founder.png", role: "founder" }
       }));
@@ -381,7 +437,7 @@ function syncSidebarActiveState() {
 }
 
 // --- 5. RENDER SYSTEM ---
-function renderActiveView() {
+async function renderActiveView() {
   if (!state.userLoggedIn) {
     window.location.href = "index.html";
     return;
@@ -413,7 +469,7 @@ function renderActiveView() {
 
   if (state.activeView.startsWith("article-read-")) {
     const postId = state.activeView.replace("article-read-", "");
-    renderReadingMode(postId);
+    await renderReadingMode(postId);
   } else {
     switch (state.activeView) {
       case "dashboard":
@@ -930,7 +986,7 @@ function renderCommunityFeed(communityKey) {
             
             <button class="action-btn" onclick="openArticleRead('${post.id}')">
               <i data-lucide="message-square" style="width: 16px; height: 16px;"></i>
-              <span>Comments${post.comments.length > 0 ? ` (${post.comments.length})` : ''}</span>
+              <span class="comment-count-label" data-post-id="${post.id}">Comments${post.commentsCount > 0 ? ` (${post.commentsCount})` : ''}</span>
             </button>
             
             <button class="action-btn bookmark-btn ${isSaved ? 'active' : ''}" onclick="bookmarkPost('${post.id}')">
@@ -968,7 +1024,7 @@ function renderCommunityFeed(communityKey) {
 }
 
 // --- 5C. VIEW: READING MODE ---
-function renderReadingMode(postId) {
+async function renderReadingMode(postId) {
   const post = state.posts.find(p => p.id === postId);
   if (!post) {
     mainViewContent.innerHTML = `
@@ -990,64 +1046,95 @@ function renderReadingMode(postId) {
   const wordsCount = textOnly.trim().split(/\s+/).length;
   const readTime = Math.max(1, Math.round(wordsCount / 200));
 
-  let commentsHTML = "";
-  if (post.commentsEnabled === false) {
-    commentsHTML = `<div style="text-align: center; color: var(--text-muted); font-size:13px; padding: 20px 0;">Comments are disabled for this article.</div>`;
-  } else {
-    post.comments.forEach(comment => {
-      const cLiked = comment.likes.includes(state.currentUserRole);
-      let repliesHTML = "";
-      
-      if (comment.replies && comment.replies.length > 0) {
-        comment.replies.forEach(reply => {
-          const rLiked = reply.likes && reply.likes.includes(state.currentUserRole);
-          repliesHTML += `
-            <div class="comment-card">
-              <img src="${reply.author.avatar}" class="comment-avatar" alt="${reply.author.name}">
-              <div class="comment-content-container">
-                <div class="comment-bubble">
-                  <div class="comment-author-name">${reply.author.name} <span class="role-badge" style="font-size: 8px;">${reply.author.role}</span></div>
-                  <div class="comment-text">${reply.text}</div>
-                               <div class="comment-actions">
-                  <span class="comment-action-link ${rLiked ? 'active' : ''}" onclick="likeComment('${post.id}', '${comment.id}', true, '${reply.id}')">
-                    Like${reply.likes.length > 0 ? ` (${reply.likes.length})` : ''}
-                  </span>
-                  <span>&bull;</span>
-                  <span class="comment-action-link" onclick="toggleTranslateComment('${post.id}', '${comment.id}', '${reply.id}', this)" data-translated="false">Translate</span>
-                </div>
-              </div>
-            </div>
-          `;
-        });
-      }
+  const currentUser = getCurrentUser();
+  const { data: { session: _cmtSession } } = await client.auth.getSession().catch(() => ({ data: { session: null } }));
+  const currentUserId = _cmtSession?.user?.id;
 
-      commentsHTML += `
-        <div style="display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 16px;">
-          <div class="comment-card">
-            <img src="${comment.author.avatar}" class="comment-avatar" alt="${comment.author.name}">
-            <div class="comment-content-container">
-              <div class="comment-bubble">
-                <div class="comment-author-name">${comment.author.name} <span class="role-badge" style="font-size: 8px;">${comment.author.role}</span></div>
-                <div class="comment-text">${comment.text}</div>
-              </div>
-              <div class="comment-actions">
-                <span class="comment-action-link ${cLiked ? 'active' : ''}" onclick="likeComment('${post.id}', '${comment.id}', false)">
-                  Like${comment.likes.length > 0 ? ` (${comment.likes.length})` : ''}
-                </span>
-                <span>&bull;</span>
-                <span class="comment-action-link" onclick="focusReplyInput('${post.id}', '${comment.id}')">Reply</span>
-                <span>&bull;</span>
-                <span class="comment-action-link" onclick="toggleTranslateComment('${post.id}', '${comment.id}', '', this)" data-translated="false">Translate</span>
-              </div>
-            </div>
+  function formatRelTime(iso) {
+    const diff = Date.now() - new Date(iso).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+  }
+
+  function roleBadgeStyle(role) {
+    const colors = { founder: '#b8860b', explorer: '#2563eb', pro: '#7c3aed', member: '#6b7280' };
+    return `background:${colors[role] || colors.member}22; color:${colors[role] || colors.member}; border:1px solid ${colors[role] || colors.member}44;`;
+  }
+
+  function renderSingleComment(comment, isReply = false) {
+    const isOwner = currentUserId && comment.userId === currentUserId;
+    const isFounder = state.isFounder;
+    const canModify = isOwner || isFounder;
+
+    if (comment.isDeleted) {
+      const repliesBlock = !isReply && comment.replies && comment.replies.length > 0
+        ? `<div class="comment-reply-thread">${comment.replies.map(r => renderSingleComment(r, true)).join('')}</div>`
+        : '';
+      return `
+        <div class="comment-row ${isReply ? 'comment-reply' : ''}" data-comment-id="${comment.id}">
+          <div class="comment-deleted-notice"><i>This comment has been deleted.</i></div>
+          ${repliesBlock}
+        </div>`;
+    }
+
+    const editedLabel = comment.isEdited
+      ? `<span class="comment-edited-badge">Edited &bull; ${formatRelTime(comment.updatedAt)}</span>`
+      : '';
+
+    const repliesBlock = !isReply && comment.replies && comment.replies.length > 0
+      ? `<div class="comment-reply-thread">${comment.replies.map(r => renderSingleComment(r, true)).join('')}</div>`
+      : '';
+
+    const modActions = canModify ? `
+      <span class="comment-dot">&bull;</span>
+      <span class="comment-action-link" onclick="beginEditComment('${comment.id}', '${post.id}')">Edit</span>
+      <span class="comment-dot">&bull;</span>
+      <span class="comment-action-link comment-delete-link" onclick="confirmDeleteComment('${comment.id}', '${post.id}')">Delete</span>` : '';
+
+    const replyAction = !isReply ? `
+      <span class="comment-dot">&bull;</span>
+      <span class="comment-action-link" onclick="focusReplyInput('${post.id}', '${comment.id}')">Reply</span>` : '';
+
+    return `
+      <div class="comment-row ${isReply ? 'comment-reply' : ''}" data-comment-id="${comment.id}">
+        <img src="${comment.author.avatar}" class="comment-avatar" alt="${comment.author.name}" onerror="this.src='assets/founder.png'">
+        <div class="comment-body">
+          <div class="comment-meta-row">
+            <span class="comment-author-name">${comment.author.name}</span>
+            <span class="comment-role-badge" style="${roleBadgeStyle(comment.author.role)}">${comment.author.role}</span>
+            <span class="comment-timestamp">${formatRelTime(comment.createdAt)}</span>
+            ${editedLabel}
           </div>
-          
-          <div class="reply-list" id="replies-${comment.id}">
-            ${repliesHTML}
+          <div class="comment-content" id="comment-content-${comment.id}">${comment.content}</div>
+          <div class="comment-edit-area" id="comment-edit-area-${comment.id}" style="display:none;"></div>
+          <div class="comment-actions">
+            <span class="comment-action-link">Like</span>
+            ${replyAction}
+            <span class="comment-dot">&bull;</span>
+            <span class="comment-action-link" onclick="toggleTranslateComment('${post.id}', '${comment.id}', '', this)" data-translated="false">Translate</span>
+            ${modActions}
           </div>
         </div>
-      `;
-    });
+      </div>
+      ${!isReply ? `<div class="comment-reply-thread" id="reply-thread-${comment.id}">${repliesBlock ? comment.replies.map(r => renderSingleComment(r, true)).join('') : ''}</div>` : ''}
+    `;
+  }
+
+  let commentsHTML = "";
+  if (post.commentsEnabled === false) {
+    commentsHTML = `<div class="comment-empty-state">Comments are disabled for this article.</div>`;
+  } else if (!post.comments || post.comments.length === 0) {
+    commentsHTML = `
+      <div class="comment-empty-state">
+        <div class="comment-empty-title">Start the conversation.</div>
+        <div class="comment-empty-desc">Be the first to share your thoughts.</div>
+      </div>`;
+  } else {
+    commentsHTML = post.comments.map(c => renderSingleComment(c, false)).join('');
   }
 
   mainViewContent.innerHTML = `
@@ -1110,22 +1197,35 @@ function renderReadingMode(postId) {
           </button>
         </div>
 
-        <div class="comments-section" style="margin-top: 40px;">
-          <h3 class="section-card-title" style="border-bottom: 1px solid var(--border); padding-bottom: 12px;">Discussion (${post.comments.length})</h3>
-          
-          <div class="comments-list" style="margin-top: 24px;">
-            ${commentsHTML}
+        <div class="comments-section" id="comments-section-${post.id}" style="margin-top: 40px;">
+          <div class="comments-header-row">
+            <h3 class="comments-section-title">Discussion</h3>
+            <span class="comments-count-badge" id="comments-count-${post.id}">${post.commentsCount > 0 ? post.commentsCount + ' comment' + (post.commentsCount !== 1 ? 's' : '') : ''}</span>
           </div>
-          
+
           ${post.commentsEnabled !== false ? `
-            <div class="comment-input-area" style="margin-top: 24px;">
-              <img src="${getCurrentUser().avatar}" class="comment-avatar" alt="Avatar">
-              <div class="comment-field-wrapper">
-                <textarea class="comment-textarea" id="comment-input-${post.id}" placeholder="Join the discussion..." onkeydown="handleCommentSubmit(event, '${post.id}')"></textarea>
+            <div class="comment-composer" id="comment-composer-${post.id}">
+              <img src="${currentUser.avatar || 'assets/founder.png'}" class="comment-avatar" alt="Avatar" onerror="this.src='assets/founder.png'">
+              <div class="comment-composer-inner">
+                <textarea
+                  class="comment-composer-textarea"
+                  id="comment-input-${post.id}"
+                  placeholder="Share your thoughts..."
+                  rows="1"
+                  oninput="autoExpandTextarea(this); toggleCommentBtn('${post.id}')"
+                  onkeydown="handleCommentSubmit(event, '${post.id}')"
+                ></textarea>
+                <div class="comment-composer-actions" id="comment-actions-${post.id}" style="display:none;">
+                  <button class="comment-cancel-btn" onclick="cancelComment('${post.id}')">Cancel</button>
+                  <button class="comment-send-btn" id="comment-submit-${post.id}" onclick="submitComment('${post.id}')">Comment</button>
+                </div>
               </div>
-              <button class="comment-send-btn" onclick="submitComment('${post.id}')">Comment</button>
             </div>
           ` : ''}
+
+          <div class="comments-list" id="comments-list-${post.id}" style="margin-top: 24px;">
+            ${commentsHTML}
+          </div>
         </div>
         
       </div>
@@ -1873,181 +1973,464 @@ window.sharePost = function(postId) {
     .catch(() => alert(`Share URL: ${shareURL}`));
 };
 
+// ── Comment UI Helpers ──────────────────────────────────────────────────────
+
+window.autoExpandTextarea = function(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 180) + 'px';
+};
+
+window.toggleCommentBtn = function(postId) {
+  const ta = document.getElementById(`comment-input-${postId}`);
+  const actions = document.getElementById(`comment-actions-${postId}`);
+  if (!ta || !actions) return;
+  actions.style.display = ta.value.trim().length > 0 ? 'flex' : 'none';
+};
+
+window.cancelComment = function(postId) {
+  const ta = document.getElementById(`comment-input-${postId}`);
+  const actions = document.getElementById(`comment-actions-${postId}`);
+  if (ta) { ta.value = ''; ta.style.height = 'auto'; }
+  if (actions) actions.style.display = 'none';
+};
+
 window.focusCommentInput = function(postId) {
   const el = document.getElementById(`comment-input-${postId}`);
   if (el) el.focus();
 };
 
 window.handleCommentSubmit = function(e, postId) {
-  if (e.key === "Enter" && !e.shiftKey) {
+  if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
     submitComment(postId);
   }
 };
 
-window.submitComment = function(postId) {
+function showCommentToast(msg, isError = false) {
+  let toast = document.getElementById('comment-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'comment-toast';
+    toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:opacity 0.3s;pointer-events:none;';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.style.background = isError ? '#ef4444' : '#10b981';
+  toast.style.color = '#fff';
+  toast.style.opacity = '1';
+  setTimeout(() => { toast.style.opacity = '0'; }, 3000);
+}
+
+function updateCommentCountUI(postId) {
+  const post = state.posts.find(p => p.id === postId);
+  if (!post) return;
+  const count = post.commentsCount;
+  // Reading mode badge
+  const badge = document.getElementById(`comments-count-${postId}`);
+  if (badge) badge.textContent = count > 0 ? `${count} comment${count !== 1 ? 's' : ''}` : '';
+  // Feed card button label
+  const feedLabels = document.querySelectorAll(`.comment-count-label[data-post-id="${postId}"]`);
+  feedLabels.forEach(el => {
+    el.textContent = `Comments${count > 0 ? ` (${count})` : ''}`;
+  });
+}
+
+function appendCommentToDOM(postId, commentObj, parentCommentId = null) {
+  function formatRelTime(iso) {
+    const diff = Date.now() - new Date(iso).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+  }
+  function roleBadgeStyle(role) {
+    const colors = { founder: '#b8860b', explorer: '#2563eb', pro: '#7c3aed', member: '#6b7280' };
+    return `background:${colors[role]||colors.member}22;color:${colors[role]||colors.member};border:1px solid ${colors[role]||colors.member}44;`;
+  }
+  const isOwner = true; // just appended — must be current user
+  const isReply = !!parentCommentId;
+  const html = `
+    <div class="comment-row ${isReply ? 'comment-reply' : ''} comment-new-appear" data-comment-id="${commentObj.id}">
+      <img src="${commentObj.author.avatar}" class="comment-avatar" alt="${commentObj.author.name}" onerror="this.src='assets/founder.png'">
+      <div class="comment-body">
+        <div class="comment-meta-row">
+          <span class="comment-author-name">${commentObj.author.name}</span>
+          <span class="comment-role-badge" style="${roleBadgeStyle(commentObj.author.role)}">${commentObj.author.role}</span>
+          <span class="comment-timestamp">${formatRelTime(commentObj.createdAt)}</span>
+        </div>
+        <div class="comment-content" id="comment-content-${commentObj.id}">${commentObj.content}</div>
+        <div class="comment-edit-area" id="comment-edit-area-${commentObj.id}" style="display:none;"></div>
+        <div class="comment-actions">
+          <span class="comment-action-link">Like</span>
+          ${!isReply ? `<span class="comment-dot">&bull;</span><span class="comment-action-link" onclick="focusReplyInput('${postId}', '${commentObj.id}')">Reply</span>` : ''}
+          <span class="comment-dot">&bull;</span>
+          <span class="comment-action-link comment-delete-link" onclick="confirmDeleteComment('${commentObj.id}', '${postId}')">Delete</span>
+          <span class="comment-dot">&bull;</span>
+          <span class="comment-action-link" onclick="beginEditComment('${commentObj.id}', '${postId}')">Edit</span>
+        </div>
+      </div>
+    </div>
+    ${!isReply ? `<div class="comment-reply-thread" id="reply-thread-${commentObj.id}"></div>` : ''}
+  `;
+  if (isReply) {
+    const thread = document.getElementById(`reply-thread-${parentCommentId}`);
+    if (thread) {
+      thread.insertAdjacentHTML('beforeend', html);
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+      return;
+    }
+  }
+  const list = document.getElementById(`comments-list-${postId}`);
+  if (list) {
+    // Remove empty state if present
+    const empty = list.querySelector('.comment-empty-state');
+    if (empty) empty.remove();
+    list.insertAdjacentHTML('beforeend', html);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+}
+
+// ── Submit Comment ──────────────────────────────────────────────────────────
+
+window.submitComment = async function(postId) {
   const post = state.posts.find(p => p.id === postId);
   const el = document.getElementById(`comment-input-${postId}`);
   if (!post || !el) return;
-  
+
   const text = el.value.trim();
-  if (text.length === 0) return;
-  
+  if (!text) return;
+
+  const { data: { session } } = await client.auth.getSession();
+  if (!session) { showCommentToast('Please sign in to comment.', true); return; }
+
   const user = getCurrentUser();
-  const userRole = state.currentUserRole;
-  
-  const newComment = {
-    id: "c-" + Date.now(),
+  const tempId = 'temp-' + Date.now();
+  const now = new Date().toISOString();
+
+  const optimisticComment = {
+    id: tempId,
+    postId,
+    userId: session.user.id,
+    parentId: null,
+    content: text,
+    createdAt: now,
+    updatedAt: now,
+    isEdited: false,
+    isDeleted: false,
     author: {
-      name: user.name,
-      avatar: user.avatar,
-      role: userRole === "founder" ? "founder" : `${user.tier} member`
+      name: user.name || 'You',
+      role: state.isFounder ? 'founder' : (state.currentUserRole || 'member'),
+      avatar: user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name||'M')}&background=6c63ff&color=fff&size=64`
     },
-    text: text,
-    likes: [],
     replies: []
   };
-  
-  post.comments.push(newComment);
-  
-  if (!user.commentHistory) user.commentHistory = [];
-  user.commentHistory.unshift({
-    text: text,
-    date: "Just now",
-    postTitle: post.title
-  });
 
-  // Notify founder dashboard of comments by students
-  if (userRole !== "founder") {
-    if (!state.notifications) state.notifications = [];
-    state.notifications.unshift({
-      id: "notif-c-founder-" + Date.now(),
-      text: `**${user.name}** commented on "${post.title}": "${text.substring(0, 30)}..."`,
-      time: "Just now",
-      unread: true,
-      type: "comment"
-    });
-  } else if (post.author.email !== user.email) {
-    state.notifications.unshift({
-      id: "notif-c-" + Date.now(),
-      text: `**${user.name}** commented on your article: "${text.substring(0, 30)}..."`,
-      time: "Just now",
-      unread: true,
-      type: "comment"
-    });
+  if (!post.comments) post.comments = [];
+  post.comments.push(optimisticComment);
+  post.commentsCount = (post.commentsCount || 0) + 1;
+
+  // Clear composer
+  el.value = '';
+  el.style.height = 'auto';
+  const actions = document.getElementById(`comment-actions-${postId}`);
+  if (actions) actions.style.display = 'none';
+
+  appendCommentToDOM(postId, optimisticComment);
+  updateCommentCountUI(postId);
+
+  try {
+    const { data, error } = await client.from('post_comments').insert([{
+      post_id: postId,
+      user_id: session.user.id,
+      content: text
+    }]).select().single();
+
+    if (error) throw error;
+
+    // Replace temp id with real id in state
+    optimisticComment.id = data.id;
+    const el2 = document.querySelector(`[data-comment-id="${tempId}"]`);
+    if (el2) {
+      el2.dataset.commentId = data.id;
+      const content = el2.querySelector('[id^="comment-content-"]');
+      if (content) content.id = `comment-content-${data.id}`;
+      const editArea = el2.querySelector('[id^="comment-edit-area-"]');
+      if (editArea) editArea.id = `comment-edit-area-${data.id}`;
+    }
+    const replyThread = document.getElementById(`reply-thread-${tempId}`);
+    if (replyThread) replyThread.id = `reply-thread-${data.id}`;
+
+  } catch (err) {
+    console.error('Failed to post comment:', err);
+    // Rollback
+    post.comments = post.comments.filter(c => c.id !== tempId);
+    post.commentsCount = Math.max(0, post.commentsCount - 1);
+    const el3 = document.querySelector(`[data-comment-id="${tempId}"]`);
+    if (el3) el3.closest('.comment-row')?.remove();
+    const thread = document.getElementById(`reply-thread-${tempId}`);
+    if (thread) thread.remove();
+    updateCommentCountUI(postId);
+    showCommentToast('Failed to post comment. Please try again.', true);
   }
-
-  el.value = "";
-  saveState();
-  renderActiveView();
 };
 
+// ── Submit Reply ────────────────────────────────────────────────────────────
+
 window.focusReplyInput = function(postId, commentId) {
-  const thread = document.getElementById(`replies-${commentId}`);
+  const thread = document.getElementById(`reply-thread-${commentId}`);
   if (!thread) return;
 
   const existing = document.getElementById(`reply-input-wrapper-${commentId}`);
-  if (existing) {
-    existing.remove();
-    return;
-  }
+  if (existing) { existing.remove(); return; }
 
-  const wrapper = document.createElement("div");
+  const user = getCurrentUser();
+  const wrapper = document.createElement('div');
   wrapper.id = `reply-input-wrapper-${commentId}`;
-  wrapper.style.display = "flex";
-  wrapper.style.gap = "10px";
-  wrapper.style.marginTop = "12px";
-  wrapper.style.paddingLeft = "24px";
-  
+  wrapper.className = 'reply-composer';
   wrapper.innerHTML = `
-    <img src="${getCurrentUser().avatar}" class="comment-avatar" alt="Avatar" style="width:24px; height:24px;">
-    <div class="comment-field-wrapper">
-      <input type="text" class="comment-textarea" id="reply-field-${commentId}" placeholder="Write a reply... (Enter to post)" style="height:32px; font-size:12px; padding:4px 10px;" onkeydown="handleReplySubmit(event, '${postId}', '${commentId}')">
+    <img src="${user.avatar || 'assets/founder.png'}" class="comment-avatar" alt="You" style="width:24px;height:24px;" onerror="this.src='assets/founder.png'">
+    <div style="flex:1;">
+      <textarea class="comment-composer-textarea" id="reply-field-${commentId}" placeholder="Write a reply... (Enter to post)" rows="1"
+        oninput="autoExpandTextarea(this)"
+        onkeydown="handleReplySubmit(event, '${postId}', '${commentId}')"
+        style="font-size:12.5px;"></textarea>
+      <div style="display:flex;gap:8px;margin-top:6px;justify-content:flex-end;">
+        <button class="comment-cancel-btn" onclick="document.getElementById('reply-input-wrapper-${commentId}').remove()">Cancel</button>
+        <button class="comment-send-btn" style="padding:5px 14px;font-size:12px;" onclick="submitReply('${postId}', '${commentId}')">Reply</button>
+      </div>
     </div>
-    <button class="comment-send-btn" style="height:32px; font-size:11px; padding:0 12px;" onclick="submitReply('${postId}', '${commentId}')">Reply</button>
   `;
-
-  thread.appendChild(wrapper);
+  thread.insertAdjacentElement('afterbegin', wrapper);
   document.getElementById(`reply-field-${commentId}`).focus();
 };
 
 window.handleReplySubmit = function(e, postId, commentId) {
-  if (e.key === "Enter") {
+  if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
     submitReply(postId, commentId);
   }
 };
 
-window.submitReply = function(postId, commentId) {
+window.submitReply = async function(postId, commentId) {
   const post = state.posts.find(p => p.id === postId);
   if (!post) return;
-  const comment = post.comments.find(c => c.id === commentId);
-  if (!comment) return;
-  
+  const parentComment = post.comments.find(c => c.id === commentId);
+  if (!parentComment) return;
+
   const el = document.getElementById(`reply-field-${commentId}`);
   if (!el) return;
-  
   const text = el.value.trim();
-  if (text.length === 0) return;
-  
-  const user = getCurrentUser();
-  const userRole = state.currentUserRole;
-  
-  const newReply = {
-    id: "r-" + Date.now(),
-    author: {
-      name: user.name,
-      avatar: user.avatar,
-      role: userRole === "founder" ? "founder" : `${user.tier} member`
-    },
-    text: text,
-    likes: []
-  };
-  
-  if (!comment.replies) comment.replies = [];
-  comment.replies.push(newReply);
-  
-  if (!user.commentHistory) user.commentHistory = [];
-  user.commentHistory.unshift({
-    text: `Replied: "${text}"`,
-    date: "Just now",
-    postTitle: post.title
-  });
+  if (!text) return;
 
-  saveState();
-  renderActiveView();
+  const { data: { session } } = await client.auth.getSession();
+  if (!session) { showCommentToast('Please sign in to reply.', true); return; }
+
+  const user = getCurrentUser();
+  const tempId = 'temp-reply-' + Date.now();
+  const now = new Date().toISOString();
+
+  const optimisticReply = {
+    id: tempId,
+    postId,
+    userId: session.user.id,
+    parentId: commentId,
+    content: text,
+    createdAt: now,
+    updatedAt: now,
+    isEdited: false,
+    isDeleted: false,
+    author: {
+      name: user.name || 'You',
+      role: state.isFounder ? 'founder' : (state.currentUserRole || 'member'),
+      avatar: user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name||'M')}&background=6c63ff&color=fff&size=64`
+    },
+    replies: []
+  };
+
+  if (!parentComment.replies) parentComment.replies = [];
+  parentComment.replies.push(optimisticReply);
+  post.commentsCount = (post.commentsCount || 0) + 1;
+
+  // Remove reply composer
+  const wrapper = document.getElementById(`reply-input-wrapper-${commentId}`);
+  if (wrapper) wrapper.remove();
+
+  appendCommentToDOM(postId, optimisticReply, commentId);
+  updateCommentCountUI(postId);
+
+  try {
+    const { data, error } = await client.from('post_comments').insert([{
+      post_id: postId,
+      user_id: session.user.id,
+      parent_comment_id: commentId,
+      content: text
+    }]).select().single();
+
+    if (error) throw error;
+    optimisticReply.id = data.id;
+
+  } catch (err) {
+    console.error('Failed to post reply:', err);
+    parentComment.replies = parentComment.replies.filter(r => r.id !== tempId);
+    post.commentsCount = Math.max(0, post.commentsCount - 1);
+    const el3 = document.querySelector(`[data-comment-id="${tempId}"]`);
+    if (el3) el3.remove();
+    updateCommentCountUI(postId);
+    showCommentToast('Failed to post reply. Please try again.', true);
+  }
 };
 
-window.likeComment = function(postId, commentId, isReply = false, replyId = null) {
+// ── Edit Comment ─────────────────────────────────────────────────────────────
+
+window.beginEditComment = function(commentId, postId) {
   const post = state.posts.find(p => p.id === postId);
   if (!post) return;
-  const comment = post.comments.find(c => c.id === commentId);
-  if (!comment) return;
 
-  const currentRole = state.currentUserRole;
-
-  if (isReply) {
-    const reply = comment.replies.find(r => r.id === replyId);
-    if (reply) {
-      if (!reply.likes) reply.likes = [];
-      const idx = reply.likes.indexOf(currentRole);
-      if (idx === -1) {
-        reply.likes.push(currentRole);
-      } else {
-        reply.likes.splice(idx, 1);
-      }
-    }
-  } else {
-    const idx = comment.likes.indexOf(currentRole);
-    if (idx === -1) {
-      comment.likes.push(currentRole);
-    } else {
-      comment.likes.splice(idx, 1);
+  // Find comment in top-level or replies
+  let comment = post.comments.find(c => c.id === commentId);
+  if (!comment) {
+    for (const c of post.comments) {
+      comment = (c.replies || []).find(r => r.id === commentId);
+      if (comment) break;
     }
   }
+  if (!comment) return;
 
-  saveState();
-  renderActiveView();
+  const contentEl = document.getElementById(`comment-content-${commentId}`);
+  const editArea = document.getElementById(`comment-edit-area-${commentId}`);
+  if (!contentEl || !editArea) return;
+
+  contentEl.style.display = 'none';
+  editArea.style.display = 'block';
+  editArea.innerHTML = `
+    <textarea class="comment-composer-textarea" id="edit-textarea-${commentId}" style="font-size:13px;margin-top:4px;">${comment.content}</textarea>
+    <div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end;">
+      <button class="comment-cancel-btn" onclick="cancelEditComment('${commentId}')">Cancel</button>
+      <button class="comment-send-btn" style="padding:6px 16px;font-size:12px;" onclick="saveEditComment('${commentId}', '${postId}')">Save</button>
+    </div>
+  `;
+  const ta = document.getElementById(`edit-textarea-${commentId}`);
+  if (ta) { ta.focus(); ta.selectionStart = ta.value.length; }
+};
+
+window.cancelEditComment = function(commentId) {
+  const contentEl = document.getElementById(`comment-content-${commentId}`);
+  const editArea = document.getElementById(`comment-edit-area-${commentId}`);
+  if (contentEl) contentEl.style.display = '';
+  if (editArea) { editArea.style.display = 'none'; editArea.innerHTML = ''; }
+};
+
+window.saveEditComment = async function(commentId, postId) {
+  const ta = document.getElementById(`edit-textarea-${commentId}`);
+  if (!ta) return;
+  const newText = ta.value.trim();
+  if (!newText) return;
+
+  const post = state.posts.find(p => p.id === postId);
+  if (!post) return;
+
+  let comment = post.comments.find(c => c.id === commentId);
+  if (!comment) {
+    for (const c of post.comments) {
+      comment = (c.replies || []).find(r => r.id === commentId);
+      if (comment) break;
+    }
+  }
+  if (!comment) return;
+
+  const prevContent = comment.content;
+  comment.content = newText;
+  comment.isEdited = true;
+  comment.updatedAt = new Date().toISOString();
+
+  // Update DOM immediately
+  const contentEl = document.getElementById(`comment-content-${commentId}`);
+  if (contentEl) { contentEl.textContent = newText; contentEl.style.display = ''; }
+  const editArea = document.getElementById(`comment-edit-area-${commentId}`);
+  if (editArea) { editArea.style.display = 'none'; editArea.innerHTML = ''; }
+
+  // Add edited badge
+  const metaRow = contentEl?.closest('.comment-body')?.querySelector('.comment-meta-row');
+  if (metaRow && !metaRow.querySelector('.comment-edited-badge')) {
+    const badge = document.createElement('span');
+    badge.className = 'comment-edited-badge';
+    badge.textContent = 'Edited';
+    metaRow.appendChild(badge);
+  }
+
+  try {
+    const { error } = await client.from('post_comments').update({
+      content: newText,
+      is_edited: true,
+      updated_at: comment.updatedAt
+    }).eq('id', commentId);
+    if (error) throw error;
+    showCommentToast('Comment updated.');
+  } catch (err) {
+    console.error('Failed to edit comment:', err);
+    comment.content = prevContent;
+    comment.isEdited = false;
+    if (contentEl) contentEl.textContent = prevContent;
+    showCommentToast('Failed to save edit.', true);
+  }
+};
+
+// ── Delete Comment (Soft) ────────────────────────────────────────────────────
+
+window.confirmDeleteComment = function(commentId, postId) {
+  const row = document.querySelector(`[data-comment-id="${commentId}"]`);
+  if (!row) return;
+
+  // Inline confirmation
+  const existing = row.querySelector('.delete-confirm-inline');
+  if (existing) { existing.remove(); return; }
+
+  const confirm = document.createElement('div');
+  confirm.className = 'delete-confirm-inline';
+  confirm.innerHTML = `
+    <span style="font-size:12.5px;color:var(--text-muted);">Delete this comment?</span>
+    <button class="comment-cancel-btn" onclick="this.closest('.delete-confirm-inline').remove()">Cancel</button>
+    <button class="comment-send-btn" style="background:#ef4444;padding:4px 12px;font-size:12px;" onclick="softDeleteComment('${commentId}', '${postId}')">Delete</button>
+  `;
+  row.querySelector('.comment-body')?.appendChild(confirm);
+};
+
+window.softDeleteComment = async function(commentId, postId) {
+  const post = state.posts.find(p => p.id === postId);
+  if (!post) return;
+
+  let comment = post.comments.find(c => c.id === commentId);
+  if (!comment) {
+    for (const c of post.comments) {
+      comment = (c.replies || []).find(r => r.id === commentId);
+      if (comment) break;
+    }
+  }
+  if (!comment) return;
+
+  comment.isDeleted = true;
+
+  // DOM update — replace content with deleted notice
+  const row = document.querySelector(`[data-comment-id="${commentId}"]`);
+  if (row) {
+    const body = row.querySelector('.comment-body');
+    if (body) {
+      body.innerHTML = '<div class="comment-deleted-notice"><i>This comment has been deleted.</i></div>';
+    }
+    row.querySelector('img')?.remove();
+  }
+
+  try {
+    const { error } = await client.from('post_comments').update({ is_deleted: true }).eq('id', commentId);
+    if (error) throw error;
+    showCommentToast('Comment deleted.');
+  } catch (err) {
+    console.error('Failed to delete comment:', err);
+    comment.isDeleted = false;
+    showCommentToast('Failed to delete comment.', true);
+  }
 };
 
 // --- 7. EDITOR DELEGATE (logic lives in editor.js) ---
@@ -2453,6 +2836,77 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
 
             updateLikeUI(postId);
+          }
+        }
+      )
+      .subscribe();
+
+    // Realtime for post_comments
+    window.client
+      .channel('schema-db-comments')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'post_comments' },
+        async (payload) => {
+          const postId = payload.new?.post_id || payload.old?.post_id;
+          if (!postId) return;
+
+          const post = state.posts.find(p => p.id === postId);
+          if (!post) return;
+
+          const { data: { session: rtSession } } = await client.auth.getSession();
+
+          if (payload.eventType === 'INSERT') {
+            const c = payload.new;
+            // Don't duplicate optimistic comments already in state
+            const alreadyExists = post.comments.some(x => x.id === c.id) ||
+              post.comments.some(x => (x.replies||[]).some(r => r.id === c.id));
+            if (alreadyExists) return;
+            if (rtSession && c.user_id === rtSession.user.id) return; // own comment already optimistic
+
+            const { data: profile } = await client
+              .from('profiles').select('name,role').eq('id', c.user_id).maybeSingle();
+            const newComment = {
+              id: c.id, postId: c.post_id, userId: c.user_id,
+              parentId: c.parent_comment_id || null,
+              content: c.content, createdAt: c.created_at, updatedAt: c.updated_at,
+              isEdited: false, isDeleted: false,
+              author: {
+                name: profile?.name || 'Member',
+                role: profile?.role || 'member',
+                avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.name||'M')}&background=6c63ff&color=fff&size=64`
+              },
+              replies: []
+            };
+            if (c.parent_comment_id) {
+              const parent = post.comments.find(x => x.id === c.parent_comment_id);
+              if (parent) { if (!parent.replies) parent.replies = []; parent.replies.push(newComment); }
+            } else {
+              post.comments.push(newComment);
+            }
+            post.commentsCount = (post.commentsCount || 0) + 1;
+            appendCommentToDOM(postId, newComment, c.parent_comment_id || null);
+            updateCommentCountUI(postId);
+          } else if (payload.eventType === 'UPDATE') {
+            const c = payload.new;
+            let found = post.comments.find(x => x.id === c.id);
+            if (!found) for (const x of post.comments) { found = (x.replies||[]).find(r => r.id === c.id); if (found) break; }
+            if (found) {
+              found.content = c.content;
+              found.isEdited = c.is_edited;
+              found.isDeleted = c.is_deleted;
+              found.updatedAt = c.updated_at;
+              const contentEl = document.getElementById(`comment-content-${c.id}`);
+              if (contentEl && !c.is_deleted) contentEl.textContent = c.content;
+              if (c.is_deleted) {
+                const row = document.querySelector(`[data-comment-id="${c.id}"]`);
+                if (row) {
+                  const body = row.querySelector('.comment-body');
+                  if (body) body.innerHTML = '<div class="comment-deleted-notice"><i>This comment has been deleted.</i></div>';
+                  row.querySelector('img')?.remove();
+                }
+              }
+            }
           }
         }
       )

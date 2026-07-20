@@ -290,7 +290,7 @@ const KrishnaiteEditor = (() => {
         id: 'post-' + Date.now(), title, body, community, excerpt, tags,
         author: { name: 'Founder', email: 'founder@krishnaite.dev', avatar: 'assets/founder.png', role: 'founder' },
         createdAt: new Date().toISOString(), pinned, coverImage: _coverUrl || null,
-        coverY: parseInt(_coverY), commentsEnabled, likes: [], attachments: [], comments: [],
+        coverY: parseInt(_coverY), commentsEnabled, likesCount: 0, likedByCurrentUser: false, likePending: false, attachments: [], comments: [],
         images: _uploadedImages
       };
       
@@ -832,13 +832,9 @@ const KrishnaiteEditor = (() => {
       for (const item of items) {
         if (item.type.startsWith('image/')) {
           e.preventDefault();
+          e.stopPropagation();
           const file = item.getAsFile();
-          const reader = new FileReader();
-          reader.onload = ev => {
-            document.execCommand('insertHTML', false,
-              `<figure style="margin:20px 0;"><img src="${ev.target.result}" alt="Pasted image" style="max-width:100%;border-radius:8px;display:block;"><figcaption contenteditable="true" style="text-align:center;font-size:13px;color:var(--text-muted);padding:6px;outline:none;">Add a caption...</figcaption></figure>`);
-          };
-          reader.readAsDataURL(file);
+          _compressAndUpload(file);
           return;
         }
       }
@@ -902,6 +898,7 @@ const KrishnaiteEditor = (() => {
       files.forEach(file => {
         if (file.type.startsWith("image/")) {
           e.preventDefault();
+          e.stopPropagation();
           _compressAndUpload(file);
         }
       });

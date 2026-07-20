@@ -304,3 +304,32 @@ create policy "Authenticated users can upload community images"
 create policy "Users can delete their own community images"
   on storage.objects for delete
   using (bucket_id = 'community-images' and auth.uid() = owner);
+
+-- Migration: Add post_likes table for relational database-backed likes
+create table if not exists public.post_likes (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid references public.posts(id) on delete cascade not null,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  created_at timestamp with time zone default now() not null,
+  unique (post_id, user_id)
+);
+
+-- Create indexes for query optimization
+create index if not exists post_likes_post_id_idx on public.post_likes(post_id);
+create index if not exists post_likes_user_id_idx on public.post_likes(user_id);
+
+-- Enable RLS on post_likes
+alter table public.post_likes enable row level security;
+
+-- Policies for post_likes
+create policy "Anyone can view post likes"
+  on public.post_likes for select
+  using (true);
+
+create policy "Authenticated users can insert their own likes"
+  on public.post_likes for insert
+  with check (auth.role() = 'authenticated' and auth.uid() = user_id);
+
+create policy "Users can delete their own likes"
+  on public.post_likes for delete
+  using (auth.role() = 'authenticated' and auth.uid() = user_id);

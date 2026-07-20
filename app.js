@@ -174,6 +174,23 @@ async function loadState() {
   try {
     const { data: postsData, error: postsErr } = await client.from("posts").select("*").order("created_at", { ascending: false });
     if (!postsErr && postsData) {
+      const postIds = postsData.map(p => p.id);
+      const { data: likesData } = await client.from("post_likes").select("post_id, user_id").in("post_id", postIds);
+      const { data: { session } } = await client.auth.getSession();
+      const currentUserId = session?.user?.id;
+
+      const likeCounts = {};
+      const userLiked = {};
+
+      if (likesData) {
+        likesData.forEach(like => {
+          likeCounts[like.post_id] = (likeCounts[like.post_id] || 0) + 1;
+          if (currentUserId && like.user_id === currentUserId) {
+            userLiked[like.post_id] = true;
+          }
+        });
+      }
+
       state.posts = postsData.map(p => ({
         id: p.id,
         title: p.title,
@@ -185,7 +202,9 @@ async function loadState() {
         commentsEnabled: p.comments_enabled !== false,
         coverImage: p.cover_image,
         coverY: p.cover_y,
-        likes: p.likes || [],
+        likesCount: likeCounts[p.id] || 0,
+        likedByCurrentUser: !!userLiked[p.id],
+        likePending: false,
         comments: p.comments || [],
         createdAt: p.created_at,
         author: { name: "Harshita", email: "founder@krishnaite.dev", avatar: "assets/founder.png", role: "founder" }
@@ -836,7 +855,7 @@ function renderCommunityFeed(communityKey) {
     `;
   } else {
     posts.forEach(post => {
-      const isLiked = post.likes.includes(state.currentUserRole);
+      const isLiked = post.likedByCurrentUser;
       const isSaved = getCurrentUser().savedPostIds.includes(post.id);
       
       let attachmentsHTML = "";
@@ -904,9 +923,9 @@ function renderCommunityFeed(communityKey) {
           ${attachmentsHTML}
 
           <div class="post-actions-bar" onclick="event.stopPropagation();">
-            <button class="action-btn ${isLiked ? 'active' : ''}" onclick="likePost('${post.id}')">
-              <i data-lucide="heart" style="width: 16px; height: 16px;"></i>
-              <span>Like${post.likes.length > 0 ? ` (${post.likes.length})` : ''}</span>
+            <button class="action-btn like-btn ${isLiked ? 'active' : ''}" data-post-id="${post.id}" onclick="likePost('${post.id}')">
+              <i data-lucide="heart" style="width: 16px; height: 16px; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), fill 0.2s, color 0.2s; fill: ${isLiked ? 'var(--accent-red)' : 'none'}; color: ${isLiked ? 'var(--accent-red)' : 'currentColor'};"></i>
+              <span class="like-count">Like${post.likesCount > 0 ? ` (${post.likesCount})` : ''}</span>
             </button>
             
             <button class="action-btn" onclick="openArticleRead('${post.id}')">
@@ -964,7 +983,7 @@ function renderReadingMode(postId) {
   mainAppContainer.classList.remove("hidden");
   editorView.classList.add("hidden");
 
-  const isLiked = post.likes.includes(state.currentUserRole);
+  const isLiked = post.likedByCurrentUser;
   const isSaved = getCurrentUser().savedPostIds.includes(post.id);
 
   const textOnly = post.body.replace(/<[^>]*>/g, '');
@@ -1070,9 +1089,9 @@ function renderReadingMode(postId) {
         ${renderPostGalleryHTML(post.id, post.images)}
         
         <div class="post-actions-bar" style="border-top: 1px solid var(--border); margin-top: 40px; padding-top: 16px;">
-          <button class="action-btn ${isLiked ? 'active' : ''}" onclick="likePost('${post.id}')">
-            <i data-lucide="heart" style="width: 16px; height: 16px;"></i>
-            <span>Like${post.likes.length > 0 ? ` (${post.likes.length})` : ''}</span>
+          <button class="action-btn like-btn ${isLiked ? 'active' : ''}" data-post-id="${post.id}" onclick="likePost('${post.id}')">
+            <i data-lucide="heart" style="width: 16px; height: 16px; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), fill 0.2s, color 0.2s; fill: ${isLiked ? 'var(--accent-red)' : 'none'}; color: ${isLiked ? 'var(--accent-red)' : 'currentColor'};"></i>
+            <span class="like-count">Like${post.likesCount > 0 ? ` (${post.likesCount})` : ''}</span>
           </button>
           
           <button class="action-btn bookmark-btn ${isSaved ? 'active' : ''}" onclick="bookmarkPost('${post.id}')">
@@ -1728,32 +1747,110 @@ function renderSearchResults(query) {
 }
 
 // --- 6. FEED ACTIONS ---
-window.likePost = function(postId) {
+function updateLikeUI(postId) {
   const post = state.posts.find(p => p.id === postId);
   if (!post) return;
-  
-  const userRole = state.currentUserRole;
-  const idx = post.likes.indexOf(userRole);
-  if (idx === -1) {
-    post.likes.push(userRole);
-    // Notify founder if a student likes an article
-    if (!state.isFounder) {
-      const user = getCurrentUser();
-      if (!state.notifications) state.notifications = [];
-      state.notifications.unshift({
-        id: "notif-like-" + Date.now(),
-        text: `**${user.name}** liked the article: "${post.title}"`,
-        time: "Just now",
-        unread: true,
-        type: "like"
-      });
+
+  const buttons = document.querySelectorAll(`.like-btn[data-post-id="${postId}"]`);
+  buttons.forEach(btn => {
+    const isLiked = post.likedByCurrentUser;
+    const count = post.likesCount;
+    
+    if (isLiked) {
+      btn.classList.add("active");
+    } else {
+      btn.classList.remove("active");
     }
-  } else {
-    post.likes.splice(idx, 1);
+
+    const icon = btn.querySelector("i");
+    if (icon) {
+      icon.style.transform = "scale(0.8)";
+      setTimeout(() => {
+        icon.style.transform = "scale(1.2)";
+        if (isLiked) {
+          icon.style.fill = "var(--accent-red)";
+          icon.style.color = "var(--accent-red)";
+        } else {
+          icon.style.fill = "none";
+          icon.style.color = "currentColor";
+        }
+        setTimeout(() => {
+          icon.style.transform = "scale(1)";
+        }, 150);
+      }, 50);
+    }
+
+    const countSpan = btn.querySelector(".like-count");
+    if (countSpan) {
+      countSpan.textContent = `Like${count > 0 ? ` (${count})` : ''}`;
+    }
+  });
+}
+
+window.likePost = async function(postId) {
+  const post = state.posts.find(p => p.id === postId);
+  if (!post) return;
+  if (post.likePending) return;
+
+  const { data: { session } } = await client.auth.getSession();
+  if (!session) {
+    alert("Please sign in to like posts.");
+    return;
   }
-  
-  saveState();
-  renderActiveView();
+  const currentUserId = session.user.id;
+
+  const prevLiked = post.likedByCurrentUser;
+  const prevCount = post.likesCount;
+
+  // Optimistic update
+  post.likedByCurrentUser = !prevLiked;
+  post.likesCount = prevLiked ? prevCount - 1 : prevCount + 1;
+  post.likePending = true;
+
+  updateLikeUI(postId);
+
+  try {
+    if (prevLiked) {
+      const { error } = await client
+        .from("post_likes")
+        .delete()
+        .eq("post_id", postId)
+        .eq("user_id", currentUserId);
+
+      if (error) throw error;
+    } else {
+      const { error } = await client
+        .from("post_likes")
+        .insert([{
+          post_id: postId,
+          user_id: currentUserId
+        }]);
+
+      if (error) throw error;
+
+      // Notify founder if a student likes an article
+      if (!state.isFounder) {
+        const user = getCurrentUser();
+        if (!state.notifications) state.notifications = [];
+        state.notifications.unshift({
+          id: "notif-like-" + Date.now(),
+          text: `**${user.name}** liked the article: "${post.title}"`,
+          time: "Just now",
+          unread: true,
+          type: "like"
+        });
+      }
+    }
+  } catch (err) {
+    console.error("Failed to update like in DB:", err);
+    // Rollback
+    post.likedByCurrentUser = prevLiked;
+    post.likesCount = prevCount;
+    updateLikeUI(postId);
+    alert("Failed to save like. Please check your connection.");
+  } finally {
+    post.likePending = false;
+  }
 };
 
 window.bookmarkPost = function(postId) {
@@ -2071,7 +2168,9 @@ async function triggerFeedNotification(type, title, category, targetView) {
       tags: [type, category.toLowerCase()],
       pinned: false,
       commentsEnabled: true,
-      likes: [],
+      likesCount: 0,
+      likedByCurrentUser: false,
+      likePending: false,
       comments: [],
       createdAt: new Date().toISOString(),
       author: { name: "Harshita", email: "founder@krishnaite.dev", avatar: "assets/founder.png", role: "founder" }
@@ -2315,6 +2414,50 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   initLightboxEvents();
+
+  // Realtime subscription for post_likes to sync counts across clients
+  if (window.client) {
+    window.client
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'post_likes' },
+        async (payload) => {
+          const postId = payload.new?.post_id || payload.old?.post_id;
+          if (!postId) return;
+
+          const post = state.posts.find(p => p.id === postId);
+          if (!post) return;
+
+          // Fetch the updated exact count of likes for this post
+          const { count, error } = await client
+            .from("post_likes")
+            .select("*", { count: 'exact', head: true })
+            .eq("post_id", postId);
+
+          if (!error && count !== null) {
+            post.likesCount = count;
+            
+            // Also check if current user liked it
+            const { data: { session } } = await client.auth.getSession();
+            if (session) {
+              const { data } = await client
+                .from("post_likes")
+                .select("id")
+                .eq("post_id", postId)
+                .eq("user_id", session.user.id)
+                .maybeSingle();
+              post.likedByCurrentUser = !!data;
+            } else {
+              post.likedByCurrentUser = false;
+            }
+
+            updateLikeUI(postId);
+          }
+        }
+      )
+      .subscribe();
+  }
 });
 
 

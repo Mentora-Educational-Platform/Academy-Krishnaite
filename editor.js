@@ -13,7 +13,11 @@ const KrishnaiteEditor = (() => {
       _pinnedCheckbox, _commentsCheckbox,
       _coverImage, _coverPlaceholder, _coverUrlInput, _coverRemove,
       _coverSliderBox, _coverSlider,
-      _floatingToolbar, _slashMenu, _wordCount;
+      _floatingToolbar, _slashMenu, _wordCount,
+      _imagesDropzone, _imagesFileInput, _imagesThumbGrid;
+
+  let _uploadedImages = [];
+  const _uploadFiles = {};
 
   let _coverUrl = '';
   let _coverY = 50;
@@ -42,6 +46,8 @@ const KrishnaiteEditor = (() => {
       _pinnedCheckbox.checked = !!post.pinned;
       _commentsCheckbox.checked = post.commentsEnabled !== false;
       _setCover(post.coverImage || '', post.coverY || 50);
+      _uploadedImages = Array.isArray(post.images) ? [...post.images] : [];
+      _renderThumbnails();
       _saveStatus.textContent = 'Editing saved article';
     } else {
       _postId.value = '';
@@ -56,6 +62,8 @@ const KrishnaiteEditor = (() => {
           _pinnedCheckbox.checked = !!d.pinned;
           _commentsCheckbox.checked = d.commentsEnabled !== false;
           _setCover(d.coverImage || '', d.coverY || 50);
+          _uploadedImages = Array.isArray(d.images) ? [...d.images] : [];
+          _renderThumbnails();
           _saveStatus.textContent = 'Draft restored';
         } else {
           _clearInputs();
@@ -98,6 +106,9 @@ const KrishnaiteEditor = (() => {
     _floatingToolbar   = document.getElementById('floating-toolbar');
     _slashMenu         = document.getElementById('slash-menu');
     _wordCount         = document.getElementById('editor-word-count');
+    _imagesDropzone    = document.getElementById('images-dropzone');
+    _imagesFileInput   = document.getElementById('images-file-input');
+    _imagesThumbGrid   = document.getElementById('images-thumbnails-grid');
 
     if (!_initialized) {
       _initialized = true;
@@ -129,6 +140,8 @@ const KrishnaiteEditor = (() => {
     _pinnedCheckbox.checked = false;
     _commentsCheckbox.checked = true;
     _setCover('', 50);
+    _uploadedImages = [];
+    _renderThumbnails();
     _saveStatus.textContent = 'Draft saved';
   }
 
@@ -171,7 +184,8 @@ const KrishnaiteEditor = (() => {
       pinned: _pinnedCheckbox.checked,
       commentsEnabled: _commentsCheckbox.checked,
       coverImage: _coverUrl,
-      coverY: _coverY
+      coverY: _coverY,
+      images: _uploadedImages
     };
     saveState();
   }
@@ -230,14 +244,54 @@ const KrishnaiteEditor = (() => {
     if (idVal) {
       const idx = state.posts.findIndex(p => p.id === idVal);
       if (idx !== -1) {
-        Object.assign(state.posts[idx], { title, body, community, excerpt, tags, pinned, commentsEnabled, coverImage: _coverUrl || null, coverY: parseInt(_coverY) });
+        Object.assign(state.posts[idx], {
+          title,
+          body,
+          community,
+          excerpt,
+          tags,
+          pinned,
+          commentsEnabled,
+          coverImage: _coverUrl || null,
+          coverY: parseInt(_coverY),
+          images: _uploadedImages
+        });
+      }
+
+      if (window.client) {
+        _saveStatus.textContent = 'Updating DB...';
+        try {
+          const { error } = await window.client.from("posts").update({
+            title,
+            body,
+            community,
+            excerpt,
+            tags,
+            pinned,
+            comments_enabled: commentsEnabled,
+            cover_image: _coverUrl || null,
+            cover_y: parseInt(_coverY),
+            images: _uploadedImages
+          }).eq("id", idVal);
+
+          if (error) {
+            console.error("Error updating post in Supabase:", error);
+            alert("Database Error: " + error.message);
+            return;
+          }
+        } catch (dbErr) {
+          console.error("Database connection error:", dbErr);
+          alert("Database connection error: " + dbErr.message);
+          return;
+        }
       }
     } else {
       const newPost = {
         id: 'post-' + Date.now(), title, body, community, excerpt, tags,
-        author: { name: 'Harshita', email: 'founder@krishnaite.dev', avatar: 'assets/founder.png', role: 'founder' },
+        author: { name: 'Founder', email: 'founder@krishnaite.dev', avatar: 'assets/founder.png', role: 'founder' },
         createdAt: new Date().toISOString(), pinned, coverImage: _coverUrl || null,
-        coverY: parseInt(_coverY), commentsEnabled, likes: [], attachments: [], comments: []
+        coverY: parseInt(_coverY), commentsEnabled, likes: [], attachments: [], comments: [],
+        images: _uploadedImages
       };
       
       // Real insert to Supabase posts table
@@ -258,7 +312,8 @@ const KrishnaiteEditor = (() => {
               cover_y: parseInt(_coverY),
               author_id: session.user.id,
               likes: [],
-              comments: []
+              comments: [],
+              images: _uploadedImages
             }]);
             console.log("Supabase insert result:", { data, error });
             if (error) {
@@ -788,8 +843,346 @@ const KrishnaiteEditor = (() => {
         }
       }
     }, true); // capture phase so it runs before the other paste handler
+
+    // Dropzone event listeners
+    _imagesDropzone.addEventListener('dragover', _handleDragOver);
+    _imagesDropzone.addEventListener('dragleave', _handleDragLeave);
+    _imagesDropzone.addEventListener('drop', _handleDrop);
+    _imagesDropzone.addEventListener('click', (e) => {
+      if (e.target.tagName !== "INPUT" && e.target.tagName !== "BUTTON" && !e.target.closest("button") && !e.target.closest("input")) {
+        _imagesFileInput.click();
+      }
+    });
+    _imagesFileInput.addEventListener('change', _handleFileSelect);
+
+    // Global paste listener on window
+    window.addEventListener('paste', _handleClipboardPaste);
+  }
+
+  function _handleDragOver(e) {
+    e.preventDefault();
+    _imagesDropzone.style.borderColor = "var(--primary)";
+    _imagesDropzone.style.background = "var(--bg-primary)";
+  }
+
+  function _handleDragLeave(e) {
+    e.preventDefault();
+    _imagesDropzone.style.borderColor = "var(--border)";
+    _imagesDropzone.style.background = "var(--bg-secondary)";
+  }
+
+  function _handleDrop(e) {
+    e.preventDefault();
+    _imagesDropzone.style.borderColor = "var(--border)";
+    _imagesDropzone.style.background = "var(--bg-secondary)";
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const files = Array.from(e.dataTransfer.files);
+      files.forEach(file => {
+        _compressAndUpload(file);
+      });
+    }
+  }
+
+  function _handleFileSelect(e) {
+    if (e.target.files && e.target.files.length > 0) {
+      const files = Array.from(e.target.files);
+      files.forEach(file => {
+        _compressAndUpload(file);
+      });
+      _imagesFileInput.value = "";
+    }
+  }
+
+  function _handleClipboardPaste(e) {
+    if (_editorView.classList.contains('hidden')) return;
+
+    if (e.clipboardData.files && e.clipboardData.files.length > 0) {
+      const files = Array.from(e.clipboardData.files);
+      files.forEach(file => {
+        if (file.type.startsWith("image/")) {
+          e.preventDefault();
+          _compressAndUpload(file);
+        }
+      });
+    }
+  }
+
+  function _uuidv4() {
+    return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+      (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+    );
+  }
+
+  async function _compressAndUpload(file) {
+    if (_uploadedImages.length >= 10) {
+      alert("Maximum 10 images per post allowed.");
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      alert("File size exceeds 20MB limit.");
+      return;
+    }
+
+    const validMimes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (!validMimes.includes(file.type)) {
+      alert("Unsupported file format.");
+      return;
+    }
+
+    const id = _uuidv4();
+    const tempImg = {
+      id,
+      name: file.name,
+      progress: 0,
+      error: false,
+      url: "",
+      alt: "",
+      width: 0,
+      height: 0,
+      size: file.size,
+      type: file.type,
+      order: _uploadedImages.length
+    };
+
+    _uploadedImages.push(tempImg);
+    _uploadFiles[id] = file;
+    _renderThumbnails();
+
+    const updateProgress = (prog) => {
+      tempImg.progress = prog;
+      _renderThumbnails();
+    };
+
+    try {
+      let uploadBlob = file;
+      let finalWidth = 0;
+      let finalHeight = 0;
+
+      if (file.type !== "image/gif") {
+        updateProgress(5);
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = url;
+        });
+
+        const maxDim = 1920;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        finalWidth = width;
+        finalHeight = height;
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+
+        uploadBlob = await new Promise((resolve) => {
+          canvas.toBlob((blob) => resolve(blob), "image/webp", 0.82);
+        });
+
+        URL.revokeObjectURL(url);
+        updateProgress(15);
+      } else {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        await new Promise((resolve) => {
+          img.onload = () => {
+            finalWidth = img.width;
+            finalHeight = img.height;
+            resolve();
+          };
+          img.onerror = () => resolve();
+          img.src = url;
+        });
+        URL.revokeObjectURL(url);
+      }
+
+      tempImg.width = finalWidth;
+      tempImg.height = finalHeight;
+      tempImg.size = uploadBlob.size;
+      tempImg.type = file.type === "image/gif" ? "image/gif" : "image/webp";
+
+      if (!window.client) {
+        throw new Error("Supabase client not initialized.");
+      }
+
+      const postIdVal = _postId.value || 'temp-' + Date.now();
+      const ext = tempImg.type === "image/gif" ? "gif" : "webp";
+      const storagePath = `${postIdVal}/${id}.${ext}`;
+
+      const simulateUploadProgress = () => {
+        let p = 20;
+        const interval = setInterval(() => {
+          if (p < 90 && tempImg.progress < 90) {
+            p += 5;
+            updateProgress(p);
+          } else {
+            clearInterval(interval);
+          }
+        }, 200);
+        return interval;
+      };
+
+      const progressInterval = simulateUploadProgress();
+
+      const { data, error } = await window.client.storage
+        .from('community-images')
+        .upload(storagePath, uploadBlob, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      clearInterval(progressInterval);
+
+      if (error) {
+        throw error;
+      }
+
+      const { data: { publicUrl } } = window.client.storage
+        .from('community-images')
+        .getPublicUrl(storagePath);
+
+      tempImg.url = publicUrl;
+      updateProgress(100);
+
+    } catch (err) {
+      console.error("Image upload failed:", err);
+      tempImg.error = true;
+      tempImg.progress = 0;
+      _renderThumbnails();
+    }
+  }
+
+  function _renderThumbnails() {
+    if (!_imagesThumbGrid) return;
+    _imagesThumbGrid.innerHTML = "";
+
+    const sorted = [..._uploadedImages].sort((a, b) => a.order - b.order);
+
+    sorted.forEach((img, index) => {
+      const isUploading = img.progress > 0 && img.progress < 100 && !img.error;
+      const isError = img.error;
+
+      let statusHTML = "";
+      if (isUploading) {
+        statusHTML = `
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+            <div style="font-size: 11px; font-weight: 600; color: var(--text-secondary);">Uploading ${img.name}...</div>
+            <div style="width: 100%; height: 6px; background: var(--bg-secondary); border-radius: 3px; overflow: hidden; border: 1px solid var(--border);">
+              <div style="width: ${img.progress}%; height: 100%; background: var(--primary); transition: width 0.1s;"></div>
+            </div>
+          </div>
+        `;
+      } else if (isError) {
+        statusHTML = `
+          <div style="flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+            <span style="font-size: 11px; color: var(--accent-red); font-weight: 600;">Upload failed</span>
+            <button class="btn-primary" type="button" onclick="KrishnaiteEditor.retryUpload('${img.id}')" style="padding: 4px 8px; font-size: 11px;">Retry</button>
+          </div>
+        `;
+      } else {
+        statusHTML = `
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+            <input type="text" placeholder="Alt text (describe image for accessibility)..." value="${img.alt || ''}" 
+                   oninput="KrishnaiteEditor.updateAltText('${img.id}', this.value)" 
+                   style="width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-primary); outline: none;">
+          </div>
+        `;
+      }
+
+      const cardHTML = `
+        <div class="thumbnail-item-card" data-id="${img.id}" style="display: flex; align-items: center; gap: 12px; padding: 10px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-sm); position: relative;">
+          <div style="width: 48px; height: 48px; border-radius: var(--radius-sm); overflow: hidden; background: var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            ${img.url ? `<img src="${img.url}" style="width: 100%; height: 100%; object-fit: cover;" alt="preview">` : `<i data-lucide="image" style="width: 20px; height: 20px; color: var(--text-muted);"></i>`}
+          </div>
+
+          ${statusHTML}
+
+          <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+            ${!isUploading && !isError ? `
+              <button class="btn-secondary" type="button" onclick="KrishnaiteEditor.moveImage('${img.id}', -1)" title="Move Up" style="padding: 6px; display: flex; align-items: center; justify-content: center;" ${index === 0 ? 'disabled' : ''}>
+                <i data-lucide="arrow-up" style="width: 14px; height: 14px;"></i>
+              </button>
+              <button class="btn-secondary" type="button" onclick="KrishnaiteEditor.moveImage('${img.id}', 1)" title="Move Down" style="padding: 6px; display: flex; align-items: center; justify-content: center;" ${index === sorted.length - 1 ? 'disabled' : ''}>
+                <i data-lucide="arrow-down" style="width: 14px; height: 14px;"></i>
+              </button>
+            ` : ''}
+            <button class="btn-secondary" type="button" onclick="KrishnaiteEditor.removeImage('${img.id}')" title="Delete" style="padding: 6px; color: var(--accent-red); display: flex; align-items: center; justify-content: center;">
+              <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+            </button>
+          </div>
+        </div>
+      `;
+      _imagesThumbGrid.insertAdjacentHTML("beforeend", cardHTML);
+    });
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  function retryUpload(id) {
+    const idx = _uploadedImages.findIndex(img => img.id === id);
+    if (idx === -1) return;
+    const file = _uploadFiles[id];
+    if (file) {
+      _uploadedImages.splice(idx, 1);
+      _compressAndUpload(file);
+    }
+  }
+
+  function updateAltText(id, value) {
+    const img = _uploadedImages.find(i => i.id === id);
+    if (img) {
+      img.alt = value;
+    }
+  }
+
+  function moveImage(id, direction) {
+    const sorted = [..._uploadedImages].sort((a, b) => a.order - b.order);
+    const idx = sorted.findIndex(i => i.id === id);
+    if (idx === -1) return;
+
+    const targetIdx = idx + direction;
+    if (targetIdx < 0 || targetIdx >= sorted.length) return;
+
+    const temp = sorted[idx].order;
+    sorted[idx].order = sorted[targetIdx].order;
+    sorted[targetIdx].order = temp;
+
+    _renderThumbnails();
+  }
+
+  function removeImage(id) {
+    const idx = _uploadedImages.findIndex(i => i.id === id);
+    if (idx !== -1) {
+      _uploadedImages.splice(idx, 1);
+      delete _uploadFiles[id];
+      _renderThumbnails();
+    }
   }
 
   // Public interface
-  return { open };
+  return {
+    open,
+    retryUpload,
+    updateAltText,
+    moveImage,
+    removeImage
+  };
 })();

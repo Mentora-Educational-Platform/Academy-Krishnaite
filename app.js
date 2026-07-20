@@ -899,6 +899,8 @@ function renderCommunityFeed(communityKey) {
             </div>
           ` : ''}
 
+          ${renderPostGalleryHTML(post.id, post.images)}
+
           ${attachmentsHTML}
 
           <div class="post-actions-bar" onclick="event.stopPropagation();">
@@ -1064,6 +1066,8 @@ function renderReadingMode(postId) {
         <div class="reading-text-content">
           ${post.body}
         </div>
+        
+        ${renderPostGalleryHTML(post.id, post.images)}
         
         <div class="post-actions-bar" style="border-top: 1px solid var(--border); margin-top: 40px; padding-top: 16px;">
           <button class="action-btn ${isLiked ? 'active' : ''}" onclick="likePost('${post.id}')">
@@ -2309,4 +2313,166 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     renderActiveView();
   });
+
+  initLightboxEvents();
 });
+
+
+// ── Lightbox & Post Images Support ──────────────────────────────────────────
+
+function renderPostGalleryHTML(postId, images) {
+  if (!images || !Array.isArray(images) || images.length === 0) return "";
+  
+  const sorted = [...images].sort((a, b) => (a.order || 0) - (b.order || 0));
+  const count = sorted.length;
+  
+  let gridStyle = "display: grid; gap: 8px; margin-top: 12px; border-radius: var(--radius-sm); overflow: hidden;";
+  let itemsHTML = "";
+  
+  if (count === 1) {
+    gridStyle += "grid-template-columns: 1fr;";
+    const img = sorted[0];
+    itemsHTML = `
+      <div style="position: relative; cursor: zoom-in;" onclick="event.stopPropagation(); openLightbox('${postId}', 0)">
+        <img src="${img.url}" alt="${img.alt || 'Community Image'}" loading="lazy" decoding="async" style="width: 100%; max-height: 500px; object-fit: cover; display: block;">
+      </div>
+    `;
+  } else if (count === 2) {
+    gridStyle += "grid-template-columns: 1fr 1fr;";
+    sorted.forEach((img, idx) => {
+      itemsHTML += `
+        <div style="position: relative; cursor: zoom-in; aspect-ratio: 4/3;" onclick="event.stopPropagation(); openLightbox('${postId}', ${idx})">
+          <img src="${img.url}" alt="${img.alt || 'Community Image'}" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+        </div>
+      `;
+    });
+  } else if (count === 3) {
+    gridStyle += "grid-template-columns: 2fr 1fr; grid-template-rows: repeat(2, 150px);";
+    itemsHTML = `
+      <div style="position: relative; cursor: zoom-in; grid-row: span 2;" onclick="event.stopPropagation(); openLightbox('${postId}', 0)">
+        <img src="${sorted[0].url}" alt="${sorted[0].alt || 'Community Image'}" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+      </div>
+      <div style="position: relative; cursor: zoom-in;" onclick="event.stopPropagation(); openLightbox('${postId}', 1)">
+        <img src="${sorted[1].url}" alt="${sorted[1].alt || 'Community Image'}" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+      </div>
+      <div style="position: relative; cursor: zoom-in;" onclick="event.stopPropagation(); openLightbox('${postId}', 2)">
+        <img src="${sorted[2].url}" alt="${sorted[2].alt || 'Community Image'}" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+      </div>
+    `;
+  } else if (count === 4) {
+    gridStyle += "grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(2, 180px);";
+    sorted.forEach((img, idx) => {
+      itemsHTML += `
+        <div style="position: relative; cursor: zoom-in;" onclick="event.stopPropagation(); openLightbox('${postId}', ${idx})">
+          <img src="${img.url}" alt="${img.alt || 'Community Image'}" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+        </div>
+      `;
+    });
+  } else {
+    gridStyle += "grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(2, 160px);";
+    const extra = count - 5;
+    
+    itemsHTML = `
+      <div style="grid-column: span 3; position: relative; cursor: zoom-in;" onclick="event.stopPropagation(); openLightbox('${postId}', 0)">
+        <img src="${sorted[0].url}" alt="${sorted[0].alt || 'Community Image'}" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+      </div>
+      <div style="grid-column: span 3; position: relative; cursor: zoom-in;" onclick="event.stopPropagation(); openLightbox('${postId}', 1)">
+        <img src="${sorted[1].url}" alt="${sorted[1].alt || 'Community Image'}" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+      </div>
+      <div style="grid-column: span 2; position: relative; cursor: zoom-in;" onclick="event.stopPropagation(); openLightbox('${postId}', 2)">
+        <img src="${sorted[2].url}" alt="${sorted[2].alt || 'Community Image'}" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+      </div>
+      <div style="grid-column: span 2; position: relative; cursor: zoom-in;" onclick="event.stopPropagation(); openLightbox('${postId}', 3)">
+        <img src="${sorted[3].url}" alt="${sorted[3].alt || 'Community Image'}" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+      </div>
+      <div style="grid-column: span 2; position: relative; cursor: zoom-in;" onclick="event.stopPropagation(); openLightbox('${postId}', 4)">
+        <img src="${sorted[4].url}" alt="${sorted[4].alt || 'Community Image'}" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+        ${extra > 0 ? `
+          <div style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; color:#fff; font-size:20px; font-weight:700; font-family:'Outfit',sans-serif;">
+            +${extra}
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
+  
+  return `<div class="post-gallery" style="${gridStyle}">${itemsHTML}</div>`;
+}
+
+let currentLightboxPostId = null;
+let currentLightboxIndex = 0;
+
+window.openLightbox = function(postId, index) {
+  const post = state.posts.find(p => p.id === postId);
+  if (!post || !post.images || post.images.length === 0) return;
+  
+  currentLightboxPostId = postId;
+  currentLightboxIndex = index;
+  
+  const overlay = document.getElementById("lightbox-overlay");
+  overlay.classList.remove("hidden");
+  
+  _renderLightboxImage();
+};
+
+function _renderLightboxImage() {
+  const post = state.posts.find(p => p.id === currentLightboxPostId);
+  if (!post || !post.images || post.images.length === 0) return;
+  
+  const sorted = [...post.images].sort((a, b) => (a.order || 0) - (b.order || 0));
+  const img = sorted[currentLightboxIndex];
+  
+  const lightboxImg = document.getElementById("lightbox-img");
+  const lightboxCaption = document.getElementById("lightbox-caption");
+  const lightboxCounter = document.getElementById("lightbox-counter");
+  
+  lightboxImg.src = img.url;
+  lightboxCaption.textContent = img.alt || "Community Image";
+  lightboxCounter.textContent = `${currentLightboxIndex + 1} / ${sorted.length}`;
+}
+
+window.closeLightbox = function() {
+  const overlay = document.getElementById("lightbox-overlay");
+  overlay.classList.add("hidden");
+};
+
+window.nextLightboxImage = function() {
+  const post = state.posts.find(p => p.id === currentLightboxPostId);
+  if (!post || !post.images || post.images.length === 0) return;
+  
+  currentLightboxIndex = (currentLightboxIndex + 1) % post.images.length;
+  _renderLightboxImage();
+};
+
+window.prevLightboxImage = function() {
+  const post = state.posts.find(p => p.id === currentLightboxPostId);
+  if (!post || !post.images || post.images.length === 0) return;
+  
+  currentLightboxIndex = (currentLightboxIndex - 1 + post.images.length) % post.images.length;
+  _renderLightboxImage();
+};
+
+function initLightboxEvents() {
+  const closeBtn = document.getElementById("lightbox-close");
+  const prevBtn = document.getElementById("lightbox-prev");
+  const nextBtn = document.getElementById("lightbox-next");
+  const overlay = document.getElementById("lightbox-overlay");
+  
+  if (closeBtn) closeBtn.onclick = window.closeLightbox;
+  if (prevBtn) prevBtn.onclick = window.prevLightboxImage;
+  if (nextBtn) nextBtn.onclick = window.nextLightboxImage;
+  
+  if (overlay) {
+    overlay.onclick = (e) => {
+      if (e.target === overlay) window.closeLightbox();
+    };
+  }
+  
+  document.addEventListener("keydown", (e) => {
+    if (overlay && !overlay.classList.contains("hidden")) {
+      if (e.key === "Escape") window.closeLightbox();
+      if (e.key === "ArrowRight") window.nextLightboxImage();
+      if (e.key === "ArrowLeft") window.prevLightboxImage();
+    }
+  });
+}

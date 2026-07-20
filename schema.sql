@@ -281,3 +281,26 @@ create policy "Only founders can update/delete posts"
 
 -- Add preferred_language column to profiles table
 alter table public.profiles add column if not exists preferred_language text default 'en';
+
+-- Migration: Add image support to community posts
+alter table public.posts add column if not exists images jsonb default '[]'::jsonb;
+
+-- Create Storage bucket for community-images
+insert into storage.buckets (id, name, public)
+values ('community-images', 'community-images', true)
+on conflict (id) do nothing;
+
+-- Enable public read access to community-images
+create policy "Community images are publicly accessible"
+  on storage.objects for select
+  using (bucket_id = 'community-images');
+
+-- Enable authenticated users to upload community-images
+create policy "Authenticated users can upload community images"
+  on storage.objects for insert
+  with check (bucket_id = 'community-images' and auth.role() = 'authenticated');
+
+-- Enable users to delete their own uploaded community-images
+create policy "Users can delete their own community images"
+  on storage.objects for delete
+  using (bucket_id = 'community-images' and auth.uid() = owner);

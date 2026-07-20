@@ -92,6 +92,11 @@ exports.handler = async (event, context) => {
 
     // 3. API Key Validation
     const apiKey = process.env.GOOGLE_TRANSLATE_API_KEY || "AIzaSyAnPyfKN-Aj4iuYpSNVY6g8asL_vFF-Wz4";
+    console.log({
+      hasKey: !!process.env.GOOGLE_TRANSLATE_API_KEY,
+      prefix: process.env.GOOGLE_TRANSLATE_API_KEY?.slice(0, 8),
+      length: process.env.GOOGLE_TRANSLATE_API_KEY?.length
+    });
     if (!apiKey) {
       return {
         statusCode: 401,

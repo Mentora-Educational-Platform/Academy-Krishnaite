@@ -440,29 +440,338 @@ const TranslationService = {
     }
   },
 
-  // Perform translation of dynamic user content using MyMemory Translation API
-  translateContent: async function (text, targetLang) {
-    if (!text || text.trim() === "") return text;
-    if (targetLang === "en" || !targetLang) return text; // Default base language is English
+  MAX_CHUNK_SIZE: 450,
 
-    const cacheKey = `${text}_en_${targetLang}`;
+  getStringHash: function(str) {
+    let hash = 0;
+    if (str.length === 0) return hash.toString();
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return Math.abs(hash).toString(36);
+  },
+
+  protectFormatting: function(text) {
+    return { protectedText: text, placeholders: [] };
+  },
+
+  restoreFormatting: function(text, placeholders) {
+    return text;
+  },
+
+  translateBlock: async function(blockText, targetLang) {
+    if (!blockText || blockText.trim() === "") return blockText;
+    const hash = this.getStringHash(blockText);
+    const cacheKey = `${hash}_to_${targetLang}`;
     if (this.cache[cacheKey]) {
       return this.cache[cacheKey];
     }
 
-    try {
-      const response = await fetch(
-        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${targetLang}`
-      );
-      const data = await response.json();
-      if (data && data.responseData && data.responseData.translatedText) {
-        const result = data.responseData.translatedText;
-        this.cache[cacheKey] = result;
-        return result;
+    const chunks = this.chunkText(blockText, this.MAX_CHUNK_SIZE);
+    const translatedChunks = [];
+
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      if (/^\s*$/.test(chunk)) {
+        translatedChunks.push(chunk);
+        continue;
       }
-      return text;
+
+      let translated = "";
+      let attempts = 0;
+      while (attempts < 2) {
+        try {
+          translated = await this.translateSingleChunk(chunk, targetLang);
+          break;
+        } catch (err) {
+          attempts++;
+          if (attempts >= 2) {
+            throw new Error(`Translation chunk ${i + 1} failed: ` + err.message);
+          }
+          await new Promise(r => setTimeout(r, 500));
+        }
+      }
+      translatedChunks.push(translated);
+    }
+
+    const result = translatedChunks.join("");
+    this.cache[cacheKey] = result;
+    return result;
+  },
+
+  getStructureCounts: function(htmlOrMarkdown) {
+    let headings = 0;
+    let paragraphs = 0;
+    let lists = 0;
+    let codeBlocks = 0;
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlOrMarkdown, "text/html");
+    
+    const hasHtml = /<[a-z][\s\S]*>/i.test(htmlOrMarkdown);
+    if (hasHtml) {
+      headings = doc.querySelectorAll("h1, h2, h3, h4, h5, h6").length;
+      paragraphs = doc.querySelectorAll("p").length;
+      lists = doc.querySelectorAll("li").length;
+      codeBlocks = doc.querySelectorAll("pre, code").length;
+    } else {
+      const lines = htmlOrMarkdown.split("\n");
+      let inCode = false;
+      for (let line of lines) {
+        if (line.trim().startsWith("```")) {
+          codeBlocks++;
+          inCode = !inCode;
+          continue;
+        }
+        if (inCode) continue;
+
+        if (/^#+\s+/.test(line)) headings++;
+        else if (/^\s*[-*+]\s+/.test(line) || /^\s*\d+\.\s+/.test(line)) lists++;
+        else if (line.trim().length > 0) paragraphs++;
+      }
+    }
+
+    return { headings, paragraphs, lists, codeBlocks };
+  },
+
+  verifyStructuralIntegrity: function(original, translated) {
+    const cOrig = this.getStructureCounts(original);
+    const cTrans = this.getStructureCounts(translated);
+    
+    return cOrig.headings === cTrans.headings &&
+           cOrig.lists === cTrans.lists &&
+           cOrig.codeBlocks === cTrans.codeBlocks;
+  },
+
+  translateHTML: async function(htmlString, targetLang, progressCallback) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlString, "text/html");
+
+    const textNodes = [];
+    function walk(node) {
+      const tag = node.nodeName.toLowerCase();
+      if (tag === "pre" || tag === "code" || tag === "script" || tag === "style") {
+        return;
+      }
+      if (node.nodeType === Node.TEXT_NODE) {
+        if (node.nodeValue && node.nodeValue.trim().length > 0) {
+          textNodes.push(node);
+        }
+      } else {
+        for (let child of node.childNodes) {
+          walk(child);
+        }
+      }
+    }
+    walk(doc.body);
+
+    for (let i = 0; i < textNodes.length; i++) {
+      if (progressCallback) {
+        progressCallback(i + 1, textNodes.length);
+      }
+      const node = textNodes[i];
+      const originalText = node.nodeValue;
+      
+      const matchPrefix = originalText.match(/^\s*/);
+      const matchSuffix = originalText.match(/\s*$/);
+      const prefix = matchPrefix ? matchPrefix[0] : "";
+      const suffix = matchSuffix ? matchSuffix[0] : "";
+      
+      const cleanText = originalText.trim();
+      const translatedClean = await this.translateBlock(cleanText, targetLang);
+      
+      node.nodeValue = prefix + translatedClean + suffix;
+    }
+
+    return doc.body.innerHTML;
+  },
+
+  translateMarkdownInline: async function(inlineText, targetLang) {
+    const pattern = /(\[.*?\]\(.*?\)(?!\))|\*\*.*?\*\*|__.*?__|__.*?_|\*.*?\*|_.*?_|~~.*?~~)/g;
+    const parts = inlineText.split(pattern);
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      if (!part) continue;
+      if (part.startsWith("[") && part.includes("](")) {
+        const match = part.match(/\[(.*?)\]\((.*?)\)/);
+        if (match) {
+          const linkText = match[1];
+          const linkUrl = match[2];
+          const translatedLinkText = await this.translateBlock(linkText, targetLang);
+          parts[i] = `[${translatedLinkText}](${linkUrl})`;
+        }
+      } else if (part.startsWith("![") && part.includes("](")) {
+        continue;
+      } else if ((part.startsWith("**") && part.endsWith("**")) || (part.startsWith("__") && part.endsWith("__"))) {
+        const sym = part.substring(0, 2);
+        const content = part.substring(2, part.length - 2);
+        const translatedContent = await this.translateBlock(content, targetLang);
+        parts[i] = `${sym}${translatedContent}${sym}`;
+      } else if ((part.startsWith("*") && part.endsWith("*")) || (part.startsWith("_") && part.endsWith("_")) || (part.startsWith("~~") && part.endsWith("~~"))) {
+        const len = part.startsWith("~~") ? 2 : 1;
+        const sym = part.substring(0, len);
+        const content = part.substring(len, part.length - len);
+        const translatedContent = await this.translateBlock(content, targetLang);
+        parts[i] = `${sym}${translatedContent}${sym}`;
+      } else {
+        parts[i] = await this.translateBlock(part, targetLang);
+      }
+    }
+    return parts.join("");
+  },
+
+  translateMarkdown: async function(markdownString, targetLang, progressCallback) {
+    const lines = markdownString.split(/(\r?\n)/);
+    const translatableIndices = [];
+
+    let inCodeBlock = false;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.startsWith("\n") || line.startsWith("\r")) continue;
+      if (line.trim().startsWith("```")) {
+        inCodeBlock = !inCodeBlock;
+        continue;
+      }
+      if (inCodeBlock) continue;
+      if (line.trim().length === 0) continue;
+
+      translatableIndices.push(i);
+    }
+
+    for (let idx = 0; idx < translatableIndices.length; idx++) {
+      const lineIdx = translatableIndices[idx];
+      if (progressCallback) {
+        progressCallback(idx + 1, translatableIndices.length);
+      }
+
+      const line = lines[lineIdx];
+      let prefix = "";
+      let cleanLine = line;
+
+      const headingMatch = line.match(/^(#+\s+)/);
+      const listMatch = line.match(/^(\s*[-*+]\s+|\s*\d+\.\s+)/);
+
+      if (headingMatch) {
+        prefix = headingMatch[1];
+        cleanLine = line.substring(prefix.length);
+      } else if (listMatch) {
+        prefix = listMatch[1];
+        cleanLine = line.substring(prefix.length);
+      }
+
+      const translatedClean = await this.translateMarkdownInline(cleanLine, targetLang);
+      lines[lineIdx] = prefix + translatedClean;
+    }
+
+    return lines.join("");
+  },
+
+  chunkText: function(text, maxLen) {
+    if (text.length <= maxLen) return [text];
+
+    const chunks = [];
+    let remainingText = text;
+
+    while (remainingText.length > 0) {
+      if (remainingText.length <= maxLen) {
+        chunks.push(remainingText);
+        break;
+      }
+
+      let prefix = remainingText.substring(0, maxLen);
+      let splitIdx = -1;
+
+      const searchRangeStart = Math.floor(maxLen * 0.7);
+      
+      let lastDoubleNL = prefix.lastIndexOf("\n\n");
+      if (lastDoubleNL >= searchRangeStart) {
+        splitIdx = lastDoubleNL + 2;
+      } else {
+        let lastNL = prefix.lastIndexOf("\n");
+        if (lastNL >= searchRangeStart) {
+          splitIdx = lastNL + 1;
+        }
+      }
+
+      if (splitIdx === -1) {
+        const sentenceEndRegex = /[.!?]\s+/g;
+        let match;
+        let lastSentenceEnd = -1;
+        while ((match = sentenceEndRegex.exec(prefix)) !== null) {
+          if (match.index >= searchRangeStart) {
+            lastSentenceEnd = match.index + match[0].length;
+          }
+        }
+        if (lastSentenceEnd !== -1) {
+          splitIdx = lastSentenceEnd;
+        }
+      }
+
+      if (splitIdx === -1) {
+        let lastSpace = prefix.lastIndexOf(" ");
+        if (lastSpace >= searchRangeStart) {
+          splitIdx = lastSpace + 1;
+        }
+      }
+
+      if (splitIdx === -1) {
+        splitIdx = maxLen;
+      }
+
+      chunks.push(remainingText.substring(0, splitIdx));
+      remainingText = remainingText.substring(splitIdx);
+    }
+
+    return chunks;
+  },
+
+  translateSingleChunk: async function(chunk, targetLang) {
+    const response = await fetch("/.netlify/functions/translate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        text: chunk,
+        targetLang: targetLang
+      })
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error ${response.status}`);
+    }
+    const data = await response.json();
+    if (data && data.translatedText) {
+      return data.translatedText;
+    }
+    throw new Error("Invalid API response format");
+  },
+
+  // Perform translation of dynamic user content using Google Cloud Translation API
+  translateContent: async function (text, targetLang, progressCallback) {
+    if (!text || text.trim() === "") return text;
+    if (targetLang === "en" || !targetLang) return text;
+
+    try {
+      let translated = "";
+      const isHtml = /<[a-z][\s\S]*>/i.test(text);
+
+      if (isHtml) {
+        translated = await this.translateHTML(text, targetLang, progressCallback);
+      } else {
+        translated = await this.translateMarkdown(text, targetLang, progressCallback);
+      }
+
+      // Structural integrity safeguard check
+      if (!this.verifyStructuralIntegrity(text, translated)) {
+        console.warn("Structural integrity mismatch. Aborting translation.");
+        return text;
+      }
+
+      return translated;
     } catch (err) {
-      console.warn("Translation API failed for text:", text, err);
+      console.error("Structured translation failed, falling back to original:", err);
       return text;
     }
   },
@@ -477,15 +786,36 @@ const TranslationService = {
 
 
 // HTML body translator that ignores pre/code blocks
-window.translateHTMLBody = async function (html, targetLang) {
+window.translateHTMLBody = async function (html, targetLang, progressCallback) {
   if (!html) return "";
   const parts = html.split(/(<pre[\s\S]*?<\/pre>)/gi);
-  const translatedParts = await Promise.all(parts.map(async (part) => {
-    if (part.toLowerCase().startsWith("<pre")) {
-      return part;
+  
+  let totalChunks = 0;
+  for (let part of parts) {
+    if (!part.toLowerCase().startsWith("<pre")) {
+      const { protectedText } = TranslationService.protectFormatting(part);
+      const partChunks = TranslationService.chunkText(protectedText, TranslationService.MAX_CHUNK_SIZE);
+      totalChunks += partChunks.length;
     }
-    return await TranslationService.translateContent(part, targetLang);
-  }));
+  }
+
+  let globalChunkIndex = 0;
+  const localCallback = (current, total) => {
+    globalChunkIndex++;
+    if (progressCallback) {
+      progressCallback(globalChunkIndex, totalChunks);
+    }
+  };
+
+  const translatedParts = [];
+  for (let part of parts) {
+    if (part.toLowerCase().startsWith("<pre")) {
+      translatedParts.push(part);
+    } else {
+      const translated = await TranslationService.translateContent(part, targetLang, localCallback);
+      translatedParts.push(translated);
+    }
+  }
   return translatedParts.join("");
 };
 
@@ -517,6 +847,13 @@ window.toggleTranslatePost = async function (postId, btn, event) {
   btn.innerHTML = `<i data-lucide="loader" class="animate-spin" style="width: 16px; height: 16px; margin-right: 4px; display: inline-block; vertical-align: middle;"></i> <span>Translating...</span>`;
   if (window.lucide) window.lucide.createIcons();
 
+  const progressCallback = (current, total) => {
+    const filled = Math.min(10, Math.round((current / total) * 10));
+    const bar = "█".repeat(filled) + "░".repeat(Math.max(0, 10 - filled));
+    btn.innerHTML = `<i data-lucide="loader" class="animate-spin" style="width: 16px; height: 16px; margin-right: 4px; display: inline-block; vertical-align: middle;"></i> <span>Translating... <code>[${bar}]</code> Chunk ${current} of ${total}</span>`;
+    if (window.lucide) window.lucide.createIcons();
+  };
+
   try {
     const targetLang = TranslationService.currentLanguage === "en" ? "te" : TranslationService.currentLanguage;
     const langNames = {
@@ -534,8 +871,8 @@ window.toggleTranslatePost = async function (postId, btn, event) {
     const targetLangName = langNames[targetLang] || "Telugu";
 
     const [translatedTitle, translatedBody] = await Promise.all([
-      TranslationService.translateContent(post.title, targetLang),
-      translateHTMLBody(post.body, targetLang)
+      TranslationService.translateContent(post.title, targetLang, progressCallback),
+      translateHTMLBody(post.body, targetLang, progressCallback)
     ]);
 
     if (translatedTitle === post.title && translatedBody === post.body) {
@@ -552,7 +889,6 @@ window.toggleTranslatePost = async function (postId, btn, event) {
       </div>
     `;
 
-    // Remove any pre-existing translation container just in case
     const oldContainer = card.querySelector(".post-translation-container");
     if (oldContainer) oldContainer.remove();
 
@@ -617,9 +953,13 @@ window.toggleTranslateComment = async function(postId, commentId, replyId, btn) 
   btn.style.pointerEvents = "none";
   btn.textContent = "Translating...";
 
+  const progressCallback = (current, total) => {
+    btn.textContent = `Translating... (${current}/${total})`;
+  };
+
   try {
     const targetLang = TranslationService.currentLanguage;
-    const translatedText = await TranslationService.translateContent(originalText, targetLang);
+    const translatedText = await TranslationService.translateContent(originalText, targetLang, progressCallback);
     textEl.innerHTML = translatedText;
 
     const badgeHTML = `<div class="translation-badge" style="font-size: 10px; color: var(--primary); font-weight: 500; margin-top: 4px;">Translated Automatically</div>`;
@@ -668,14 +1008,20 @@ window.toggleTranslateRoadmap = async function(roadmapId, btn) {
   btn.innerHTML = `<i data-lucide="loader" class="animate-spin" style="width: 12px; height: 12px;"></i> Translating...`;
   if (window.lucide) window.lucide.createIcons();
 
+  let globalChunkIndex = 0;
+  const progressCallback = (current, total) => {
+    globalChunkIndex++;
+    btn.innerHTML = `<i data-lucide="loader" class="animate-spin" style="width: 12px; height: 12px;"></i> Translating... (${globalChunkIndex})`;
+  };
+
   try {
     const targetLang = TranslationService.currentLanguage;
     const [translatedTitle, translatedNext] = await Promise.all([
-      TranslationService.translateContent(roadmap.title, targetLang),
-      roadmap.nextRoadmap !== 'None (Keep building!)' ? TranslationService.translateContent("Recommended Next Step:", targetLang) : Promise.resolve("")
+      TranslationService.translateContent(roadmap.title, targetLang, progressCallback),
+      roadmap.nextRoadmap !== 'None (Keep building!)' ? TranslationService.translateContent("Recommended Next Step:", targetLang, progressCallback) : Promise.resolve("")
     ]);
 
-    const translatedTopics = await Promise.all(roadmap.topics.map(t => TranslationService.translateContent(t.name, targetLang)));
+    const translatedTopics = await Promise.all(roadmap.topics.map(t => TranslationService.translateContent(t.name, targetLang, progressCallback)));
 
     if (titleEl) titleEl.textContent = translatedTitle;
     topicSpans.forEach((span, idx) => {
@@ -727,11 +1073,17 @@ window.toggleTranslateResource = async function(resourceId, btn) {
   btn.innerHTML = `<i data-lucide="loader" class="animate-spin" style="width: 12px; height: 12px;"></i> Translating...`;
   if (window.lucide) window.lucide.createIcons();
 
+  let globalChunkIndex = 0;
+  const progressCallback = (current, total) => {
+    globalChunkIndex++;
+    btn.innerHTML = `<i data-lucide="loader" class="animate-spin" style="width: 12px; height: 12px;"></i> Translating... (${globalChunkIndex})`;
+  };
+
   try {
     const targetLang = TranslationService.currentLanguage;
     const [translatedTitle, translatedDesc] = await Promise.all([
-      TranslationService.translateContent(resObj.title, targetLang),
-      TranslationService.translateContent(resObj.desc, targetLang)
+      TranslationService.translateContent(resObj.title, targetLang, progressCallback),
+      TranslationService.translateContent(resObj.desc, targetLang, progressCallback)
     ]);
 
     if (titleEl) titleEl.textContent = translatedTitle;

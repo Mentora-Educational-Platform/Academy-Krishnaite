@@ -119,6 +119,7 @@ async function loadState() {
   const formattedName = rawName.split(/[._-]/).map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
   
   let userRole = (userEmail === "founder@krishnaite.dev") ? "founder" : "free";
+  state.isFounder = (userEmail === "founder@krishnaite.dev");
   let dbProfile = null;
 
   // Self-healing: Ensure user profile is registered in Supabase database profiles table
@@ -314,7 +315,7 @@ function initNavigation() {
 
 function isViewLocked(view) {
   const currentRole = state.currentUserRole;
-  if (currentRole === "founder" || currentRole === "pro") return false;
+  if (state.isFounder || currentRole === "pro") return false;
   
   if (view === "comm-explorer") {
     return currentRole === "free";
@@ -376,7 +377,7 @@ function renderActiveView() {
     globalSearchInput.value = "";
   }
   
-  if (state.currentUserRole === "founder") {
+  if (state.isFounder) {
     headerCreatePostBtn.classList.remove("hidden");
   } else {
     headerCreatePostBtn.classList.add("hidden");
@@ -615,8 +616,8 @@ function updateUserInterfaceElements() {
 function renderDashboard() {
   const user = getCurrentUser();
   const accessibleChannels = ["free"];
-  if (state.currentUserRole === "explorer" || state.currentUserRole === "founder") accessibleChannels.push("explorer");
-  if (state.currentUserRole === "pro" || state.currentUserRole === "founder") {
+  if (state.currentUserRole === "explorer" || state.isFounder) accessibleChannels.push("explorer");
+  if (state.currentUserRole === "pro" || state.isFounder) {
     accessibleChannels.push("explorer");
     accessibleChannels.push("pro");
   }
@@ -872,7 +873,7 @@ function renderCommunityFeed(communityKey) {
               </div>
             </div>
             
-            ${state.currentUserRole === 'founder' ? `
+            ${state.isFounder ? `
               <div class="post-admin-actions" onclick="event.stopPropagation();">
                 <button class="admin-action-btn" title="Pin / Unpin" onclick="togglePinPost('${post.id}')">
                   <i data-lucide="pin" style="width: 14px; height: 14px; ${post.pinned ? 'fill: var(--primary); color: var(--primary);' : ''}"></i>
@@ -1174,7 +1175,7 @@ function renderRoadmaps() {
     `;
   });
 
-  const createBtnHTML = state.currentUserRole === "founder" ? `
+  const createBtnHTML = state.isFounder ? `
     <button class="btn-primary" onclick="openCreateRoadmapPrompt()" style="padding: 10px 18px; font-weight:600; display:flex; align-items:center; gap:8px;">
       <i data-lucide="plus" style="width: 16px; height: 16px;"></i> Create Roadmap
     </button>
@@ -1277,7 +1278,7 @@ function renderResources() {
     });
   }
 
-  const addBtnHTML = state.currentUserRole === "founder" ? `
+  const addBtnHTML = state.isFounder ? `
     <button class="btn-primary" onclick="openAddResourcePrompt()" style="padding: 10px 18px; font-weight:600; display:flex; align-items:center; gap:8px;">
       <i data-lucide="plus" style="width: 16px; height: 16px;"></i> Add Resource
     </button>
@@ -1365,7 +1366,7 @@ function renderAssets() {
     });
   }
 
-  const addBtnHTML = state.currentUserRole === "founder" ? `
+  const addBtnHTML = state.isFounder ? `
     <button class="btn-primary" onclick="openAddAssetPrompt()" style="padding: 10px 18px; font-weight:600; display:flex; align-items:center; gap:8px;">
       <i data-lucide="plus" style="width: 16px; height: 16px;"></i> Add Asset
     </button>
@@ -1397,7 +1398,7 @@ window.setAssetCategory = function(cat) {
 
 window.checkTierAccess = function(requiredTier) {
   const currentRole = state.currentUserRole;
-  if (currentRole === "founder" || currentRole === "pro") return true;
+  if (state.isFounder || currentRole === "pro") return true;
   if (requiredTier === "free") return true;
   if (requiredTier === "explorer") return currentRole === "explorer";
   return false;
@@ -1732,7 +1733,7 @@ window.likePost = function(postId) {
   if (idx === -1) {
     post.likes.push(userRole);
     // Notify founder if a student likes an article
-    if (userRole !== "founder") {
+    if (!state.isFounder) {
       const user = getCurrentUser();
       if (!state.notifications) state.notifications = [];
       state.notifications.unshift({

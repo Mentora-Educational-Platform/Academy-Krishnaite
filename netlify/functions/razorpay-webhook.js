@@ -85,14 +85,31 @@ exports.handler = async (event) => {
 
   const paymentId      = payment.id          || null;
   const orderId        = payment.order_id    || null;
-  const customerEmail  = payment.email       || null;
   const customerPhone  = payment.contact     || null;
   const amount         = payment.amount      || 0;   // in paise
   const method         = payment.method      || null;
 
   // Payment Page details (present on Payment Page payments)
-  const paymentPageId    = payment.invoice_id      || null;   // Razorpay Payment Page ID maps here
+  const paymentPageId    = payment.invoice_id      || null;
   const paymentPageTitle = payment.description     || null;
+
+  // ── Email extraction: fallback chain across all known payload locations ──
+  // Razorpay Payment Pages can surface the customer email in several places
+  // depending on the payment method, SDK version, and checkout configuration.
+  const customerEmail = (
+    payment.email                                                   // standard
+    || payment?.customer_details?.email                             // Payment Page customer_details block
+    || payload?.payload?.payment?.entity?.email                     // explicit full path (redundant safety)
+    || payload?.payload?.payment?.entity?.customer_details?.email   // explicit full path + customer_details
+    || payload?.payload?.order?.entity?.customer_details?.email     // order-level customer_details
+    || null
+  );
+
+  // Sanitized entity snapshot for debugging (strip card / UPI / bank fields)
+  if (!customerEmail) {
+    const { card, upi, bank, wallet, ...safePayment } = payment;
+    console.warn('[razorpay-webhook] Could not extract customer email. Sanitized payment entity:', JSON.stringify(safePayment, null, 2));
+  }
 
   console.log('[razorpay-webhook] payment.captured received:', {
     paymentId,

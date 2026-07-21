@@ -670,8 +670,12 @@ async function simulateUpgrade(viewName) {
     // TODO: After successful Razorpay Payment Page payment,
     // automatically upgrade the user's Krishnaite membership.
 
-    // Step 2: Redirect to Krishnaite one-time Payment Page
-    window.location.href = "https://rzp.io/rzp/MCixp29";
+    // Step 2: Redirect to the plan's Krishnaite one-time Payment Page
+    const paymentPageUrls = {
+      explorer: "https://rzp.io/rzp/MCixp29",
+      pro:      "https://rzp.io/rzp/16rUscO"
+    };
+    window.location.href = paymentPageUrls[selectedPlan];
 
   } catch (err) {
     alert("Error: " + err.message);

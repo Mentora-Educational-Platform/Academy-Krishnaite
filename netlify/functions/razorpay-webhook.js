@@ -152,11 +152,51 @@ exports.handler = async (event) => {
     return { statusCode: 200, body: JSON.stringify({ received: true, processed: false, reason: 'Already processed.' }) };
   }
 
-  // ── 10. Upgrade profile to Explorer Lifetime ──────────────────────────────
+  // ── 10. Resolve purchased tier from Payment Page identifier ──────────────
+  //
+  // Razorpay Payment Page slugs appear inside the invoice_id / payment_page
+  // field of the webhook payload as a suffix (e.g. "pl_MCixp29xxxxxxx").
+  // Map each known slug to the tier it should unlock.
+  //
+  // To find the full internal ID for a new page:
+  //   Razorpay Dashboard → Payment Pages → [page] → Settings → copy the ID
+  //   or inspect a test webhook payload and read payment.invoice_id.
+  //
+  const PAGE_TIER_MAP = {
+    'MCixp29': 'explorer',   // Explorer Lifetime — https://rzp.io/rzp/MCixp29
+    '16rUscO': 'pro'         // Pro Lifetime      — https://rzp.io/rzp/16rUscO
+  };
+
+  // Match by checking if paymentPageId contains any known slug.
+  // Razorpay stores the short slug inside the longer internal ID string.
+  let purchasedTier = null;
+  const pageIdStr = paymentPageId || '';
+
+  for (const [slug, tier] of Object.entries(PAGE_TIER_MAP)) {
+    if (pageIdStr.includes(slug)) {
+      purchasedTier = tier;
+      break;
+    }
+  }
+
+  if (!purchasedTier) {
+    console.warn('[razorpay-webhook] Unknown Payment Page — tier not assigned.', {
+      paymentPageId,
+      paymentId,
+      customerEmail
+    });
+    // Return 200 so Razorpay does not retry. Log allows manual review.
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ received: true, processed: false, reason: 'Unknown payment page.' })
+    };
+  }
+
+  // ── 11. Upgrade profile ───────────────────────────────────────────────────
   const { error: updateErr } = await supabase
     .from('profiles')
     .update({
-      tier:                'explorer',
+      tier:                purchasedTier,
       payment_provider:    'razorpay',
       subscription_status: 'lifetime',
       payment_id:          paymentId,
@@ -171,21 +211,21 @@ exports.handler = async (event) => {
     return { statusCode: 500, body: JSON.stringify({ error: 'Failed to upgrade profile.' }) };
   }
 
-  // ── 11. Log success ───────────────────────────────────────────────────────
-  console.log('[razorpay-webhook] Explorer Lifetime Activated:', {
+  // ── 12. Log success ───────────────────────────────────────────────────────
+  console.log(`[razorpay-webhook] ${purchasedTier.toUpperCase()} Lifetime Activated:`, {
     email:     customerEmail,
     paymentId: paymentId,
     amount:    `₹${amount / 100}`
   });
 
-  // ── 12. Return 200 OK ─────────────────────────────────────────────────────
+  // ── 13. Return 200 OK ─────────────────────────────────────────────────────
   return {
     statusCode: 200,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       received:  true,
       processed: true,
-      tier:      'explorer',
+      tier:      purchasedTier,
       status:    'lifetime'
     })
   };

@@ -222,85 +222,55 @@ const KrishnaiteEditor = (() => {
     _wordCount.textContent = `${words.toLocaleString()} words · ${readMins} min read`;
   }
 
+  let _isPublishing = false;
+
   async function _publish(isDraft) {
+    if (_isPublishing) return;
+
     const title = _title.value.trim();
     if (!isDraft && !title) {
       alert('Please add a title before publishing.');
       return;
     }
 
-    const body = _body.innerHTML;
-    const community = _communitySelect.value;
-    const excerpt = _excerptInput.value.trim();
-    const tags = _tagsInput.value.split(',').map(t => t.trim()).filter(Boolean);
-    const pinned = _pinnedCheckbox.checked;
-    const commentsEnabled = _commentsCheckbox.checked;
-    const idVal = _postId.value;
+    _isPublishing = true;
+    if (_publishBtn) _publishBtn.disabled = true;
+    if (_draftBtn) _draftBtn.disabled = true;
 
-    if (pinned) {
-      state.posts.forEach(p => { if (p.community === community) p.pinned = false; });
-    }
+    try {
+      const body = _body.innerHTML;
+      const community = _communitySelect.value;
+      const excerpt = _excerptInput.value.trim();
+      const tags = _tagsInput.value.split(',').map(t => t.trim()).filter(Boolean);
+      const pinned = _pinnedCheckbox.checked;
+      const commentsEnabled = _commentsCheckbox.checked;
+      const idVal = _postId.value;
 
-    if (idVal) {
-      const idx = state.posts.findIndex(p => p.id === idVal);
-      if (idx !== -1) {
-        Object.assign(state.posts[idx], {
-          title,
-          body,
-          community,
-          excerpt,
-          tags,
-          pinned,
-          commentsEnabled,
-          coverImage: _coverUrl || null,
-          coverY: parseInt(_coverY),
-          images: _uploadedImages
-        });
+      if (pinned) {
+        state.posts.forEach(p => { if (p.community === community) p.pinned = false; });
       }
 
-      if (window.client) {
-        _saveStatus.textContent = 'Updating DB...';
-        try {
-          const { error } = await window.client.from("posts").update({
+      if (idVal) {
+        const idx = state.posts.findIndex(p => p.id === idVal);
+        if (idx !== -1) {
+          Object.assign(state.posts[idx], {
             title,
             body,
             community,
             excerpt,
             tags,
             pinned,
-            comments_enabled: commentsEnabled,
-            cover_image: _coverUrl || null,
-            cover_y: parseInt(_coverY),
+            commentsEnabled,
+            coverImage: _coverUrl || null,
+            coverY: parseInt(_coverY),
             images: _uploadedImages
-          }).eq("id", idVal);
-
-          if (error) {
-            console.error("Error updating post in Supabase:", error);
-            alert("Database Error: " + error.message);
-            return;
-          }
-        } catch (dbErr) {
-          console.error("Database connection error:", dbErr);
-          alert("Database connection error: " + dbErr.message);
-          return;
+          });
         }
-      }
-    } else {
-      const newPost = {
-        id: 'post-' + Date.now(), title, body, community, excerpt, tags,
-        author: { name: 'Founder', email: 'founder@krishnaite.dev', avatar: 'assets/founder.png', role: 'founder' },
-        createdAt: new Date().toISOString(), pinned, coverImage: _coverUrl || null,
-        coverY: parseInt(_coverY), commentsEnabled, likesCount: 0, likedByCurrentUser: false, likePending: false, attachments: [], comments: [],
-        images: _uploadedImages
-      };
-      
-      // Real insert to Supabase posts table
-      if (window.client) {
-        _saveStatus.textContent = 'Publishing to DB...';
-        try {
-          const { data: { session } } = await window.client.auth.getSession();
-          if (session) {
-            const { data, error } = await window.client.from("posts").insert([{
+
+        if (window.client) {
+          _saveStatus.textContent = 'Updating DB...';
+          try {
+            const { error } = await window.client.from("posts").update({
               title,
               body,
               community,
@@ -310,39 +280,112 @@ const KrishnaiteEditor = (() => {
               comments_enabled: commentsEnabled,
               cover_image: _coverUrl || null,
               cover_y: parseInt(_coverY),
-              author_id: session.user.id,
-              likes: [],
-              comments: [],
               images: _uploadedImages
-            }]);
-            console.log("Supabase insert result:", { data, error });
+            }).eq("id", idVal);
+
             if (error) {
-              console.error("Error inserting post to Supabase:", error);
-              alert("Database Error: " + error.message + "\n\nDid you run the SQL script in Supabase dashboard?");
+              console.error("Error updating post in Supabase:", error);
+              alert("Database Error: " + error.message);
               return;
             }
+          } catch (dbErr) {
+            console.error("Database connection error:", dbErr);
+            alert("Database connection error: " + dbErr.message);
+            return;
           }
-        } catch (dbErr) {
-          console.error("Database connection error:", dbErr);
-          alert("Database connection error: " + dbErr.message);
-          return;
+        }
+      } else {
+        let createdPost = null;
+
+        // Real insert to Supabase posts table
+        if (window.client) {
+          _saveStatus.textContent = 'Publishing to DB...';
+          try {
+            const { data: { session } } = await window.client.auth.getSession();
+            if (session) {
+              const { data, error } = await window.client.from("posts").insert([{
+                title,
+                body,
+                community,
+                excerpt,
+                tags,
+                pinned,
+                comments_enabled: commentsEnabled,
+                cover_image: _coverUrl || null,
+                cover_y: parseInt(_coverY),
+                author_id: session.user.id,
+                likes: [],
+                comments: [],
+                images: _uploadedImages
+              }]).select().single();
+
+              console.log("Supabase insert result:", { data, error });
+              if (error) {
+                console.error("Error inserting post to Supabase:", error);
+                alert("Database Error: " + error.message + "\n\nDid you run the SQL script in Supabase dashboard?");
+                return;
+              }
+
+              if (data) {
+                createdPost = {
+                  id: data.id,
+                  title: data.title,
+                  body: data.body,
+                  community: data.community,
+                  excerpt: data.excerpt || "",
+                  tags: data.tags || [],
+                  author: { name: 'Founder', email: 'founder@krishnaite.dev', avatar: 'assets/founder.png', role: 'founder' },
+                  createdAt: data.created_at || new Date().toISOString(),
+                  pinned: !!data.pinned,
+                  coverImage: data.cover_image,
+                  coverY: data.cover_y,
+                  commentsEnabled: data.comments_enabled !== false,
+                  likesCount: 0,
+                  likedByCurrentUser: false,
+                  likePending: false,
+                  attachments: [],
+                  comments: [],
+                  images: data.images || _uploadedImages
+                };
+              }
+            }
+          } catch (dbErr) {
+            console.error("Database connection error:", dbErr);
+            alert("Database connection error: " + dbErr.message);
+            return;
+          }
+        }
+
+        // Fallback for offline/local mode if DB client is not available or didn't return record
+        if (!createdPost) {
+          createdPost = {
+            id: 'post-' + Date.now(), title, body, community, excerpt, tags,
+            author: { name: 'Founder', email: 'founder@krishnaite.dev', avatar: 'assets/founder.png', role: 'founder' },
+            createdAt: new Date().toISOString(), pinned, coverImage: _coverUrl || null,
+            coverY: parseInt(_coverY), commentsEnabled, likesCount: 0, likedByCurrentUser: false, likePending: false, attachments: [], comments: [],
+            images: _uploadedImages
+          };
+        }
+
+        state.posts.unshift(createdPost);
+        if (pinned) {
+          state.notifications.unshift({ id: 'notif-' + Date.now(), text: `Founder pinned: **${title}**`, time: 'Just now', unread: true, type: 'announcement' });
         }
       }
 
-      state.posts.unshift(newPost);
-      if (pinned) {
-        state.notifications.unshift({ id: 'notif-' + Date.now(), text: `Founder pinned: **${title}**`, time: 'Just now', unread: true, type: 'announcement' });
+      if (!isDraft) state.editorDraft = null;
+      saveState();
+
+      if (!isDraft) {
+        _saveStatus.textContent = '✅ Published!';
+        setTimeout(() => _close(), 600);
+      } else {
+        _saveStatus.textContent = '💾 Draft saved';
       }
-    }
-
-    if (!isDraft) state.editorDraft = null;
-    saveState();
-
-    if (!isDraft) {
-      _saveStatus.textContent = '✅ Published!';
-      setTimeout(() => _close(), 600);
-    } else {
-      _saveStatus.textContent = '💾 Draft saved';
+    } finally {
+      _isPublishing = false;
+      if (_publishBtn) _publishBtn.disabled = false;
+      if (_draftBtn) _draftBtn.disabled = false;
     }
   }
 

@@ -257,6 +257,7 @@ async function loadState() {
         commentsEnabled: p.comments_enabled !== false,
         coverImage: p.cover_image,
         coverY: p.cover_y,
+        images: Array.isArray(p.images) ? p.images : [],
         likesCount: likeCounts[p.id] || 0,
         likedByCurrentUser: !!userLiked[p.id],
         likePending: false,

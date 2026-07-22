@@ -2522,11 +2522,34 @@ window.editArticle = function(postId) {
   openEditor(postId);
 };
 
-window.deletePost = function(postId) {
+window.deletePost = async function(postId) {
   if (confirm("Are you sure you want to delete this article?")) {
+    // Optimistic UI update
+    const previousPosts = [...state.posts];
     state.posts = state.posts.filter(p => p.id !== postId);
     saveState();
     renderActiveView();
+
+    // Delete from database if connected to Supabase
+    if (window.client) {
+      try {
+        const { error } = await window.client.from("posts").delete().eq("id", postId);
+        if (error) {
+          console.error("Error deleting post from Supabase:", error);
+          alert("Database Error deleting post: " + error.message);
+          // Rollback local state on database error
+          state.posts = previousPosts;
+          saveState();
+          renderActiveView();
+        }
+      } catch (err) {
+        console.error("Database connection error on delete:", err);
+        alert("Failed to delete post: " + err.message);
+        state.posts = previousPosts;
+        saveState();
+        renderActiveView();
+      }
+    }
   }
 };
 

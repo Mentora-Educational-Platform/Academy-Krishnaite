@@ -152,43 +152,24 @@ exports.handler = async (event) => {
     return { statusCode: 200, body: JSON.stringify({ received: true, processed: false, reason: 'Already processed.' }) };
   }
 
-  // ── 10. Resolve purchased tier from Payment Page identifier ──────────────
-  //
-  // Razorpay Payment Page slugs appear inside the invoice_id / payment_page
-  // field of the webhook payload as a suffix (e.g. "pl_MCixp29xxxxxxx").
-  // Map each known slug to the tier it should unlock.
-  //
-  // To find the full internal ID for a new page:
-  //   Razorpay Dashboard → Payment Pages → [page] → Settings → copy the ID
-  //   or inspect a test webhook payload and read payment.invoice_id.
-  //
-  const PAGE_TIER_MAP = {
-    'MCixp29': 'explorer',   // Explorer Lifetime — https://rzp.io/rzp/MCixp29
-    '16rUscO': 'pro'         // Pro Lifetime      — https://rzp.io/rzp/16rUscO
+  // ── 10. Resolve purchased tier from payment amount (paise) ───────────────
+  const AMOUNT_TIER_MAP = {
+    67400:  'explorer',   // ₹674  — Explorer Lifetime
+    173400: 'pro'         // ₹1734 — Pro Lifetime
   };
 
-  // Match by checking if paymentPageId contains any known slug.
-  // Razorpay stores the short slug inside the longer internal ID string.
-  let purchasedTier = null;
-  const pageIdStr = paymentPageId || '';
-
-  for (const [slug, tier] of Object.entries(PAGE_TIER_MAP)) {
-    if (pageIdStr.includes(slug)) {
-      purchasedTier = tier;
-      break;
-    }
-  }
+  const purchasedTier = AMOUNT_TIER_MAP[amount] || null;
 
   if (!purchasedTier) {
-    console.warn('[razorpay-webhook] Unknown Payment Page — tier not assigned.', {
-      paymentPageId,
+    console.warn('[razorpay-webhook] Unknown payment amount — tier not assigned.', {
+      amount,
       paymentId,
       customerEmail
     });
     // Return 200 so Razorpay does not retry. Log allows manual review.
     return {
       statusCode: 200,
-      body: JSON.stringify({ received: true, processed: false, reason: 'Unknown payment page.' })
+      body: JSON.stringify({ received: true, processed: false, reason: 'Unknown payment amount.' })
     };
   }
 

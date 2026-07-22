@@ -523,35 +523,94 @@ window.logout = async function() {
 };
 
 function renderUpgradeCard(viewName) {
-  let targetTier = "Explorer";
-  let description = "Unlock project walkthroughs, intermediate roadmaps, exclusive founder insights, templates, and community discussions.";
-  let price = "$7 (₹674.60) / month";
-  
-  if (viewName === "comm-pro") {
-    targetTier = "KrishtaKarma Pro";
-    description = "Step into professional engineering. Access advanced systems architecture blueprints, live mentorship recordings, career guidance, and live chats.";
-    price = "$18 (₹1734.69) / month";
-  }
+  const isProView = viewName === "comm-pro";
 
   mainViewContent.innerHTML = `
-    <div class="card locked-community-card">
+    <div class="locked-community-card" style="max-width: 960px; margin: 0 auto;">
+
       <div class="lock-illustration">
         <i data-lucide="lock" style="width: 32px; height: 32px;"></i>
       </div>
-      <h2 class="lock-heading">${targetTier} is Locked</h2>
-      <p class="lock-desc">${description}</p>
-      <div class="pricing-label" style="font-size: 20px; font-weight: 700; color: var(--text-primary); margin: 8px 0;">
-        Upgrade for ${price}
+      <h2 class="lock-heading">${isProView ? "KrishnaKarma Pro" : "Karma Explorer"} is Locked</h2>
+      <p class="lock-desc" style="margin-bottom: 32px;">Choose the plan that's right for you. All paid plans are a single one-time payment — no subscriptions, no renewals.</p>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; text-align: left;">
+
+        <!-- Free -->
+        <div class="card" style="padding: 24px; display: flex; flex-direction: column; gap: 16px; border: 1.5px solid var(--border);">
+          <div>
+            <div style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 6px;">Krishnaite Free</div>
+            <div style="font-size: 22px; font-weight: 800; color: var(--text-primary);">₹0 <span style="font-size: 13px; font-weight: 500; color: var(--text-muted);">• Forever</span></div>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 10px; line-height: 1.6;">Start your journey with foundational learning resources and community access at no cost.</p>
+          </div>
+          <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--text-secondary);">
+            <li style="display:flex;gap:8px;align-items:flex-start;"><i data-lucide="check" style="width:14px;height:14px;color:var(--primary);flex-shrink:0;margin-top:2px;"></i> Access to the Free Feed community</li>
+            <li style="display:flex;gap:8px;align-items:flex-start;"><i data-lucide="check" style="width:14px;height:14px;color:var(--primary);flex-shrink:0;margin-top:2px;"></i> Interactive programming roadmaps</li>
+            <li style="display:flex;gap:8px;align-items:flex-start;"><i data-lucide="check" style="width:14px;height:14px;color:var(--primary);flex-shrink:0;margin-top:2px;"></i> Threaded discussions and comments</li>
+            <li style="display:flex;gap:8px;align-items:flex-start;"><i data-lucide="check" style="width:14px;height:14px;color:var(--primary);flex-shrink:0;margin-top:2px;"></i> Beginner-friendly developer cheat sheets</li>
+            <li style="display:flex;gap:8px;align-items:flex-start;"><i data-lucide="check" style="width:14px;height:14px;color:var(--primary);flex-shrink:0;margin-top:2px;"></i> Community announcements and updates</li>
+          </ul>
+          <div style="margin-top: auto;">
+            <button class="upgrade-btn" style="background: var(--bg-hover); color: var(--text-primary); cursor: default;" disabled>Get Started Free</button>
+          </div>
+        </div>
+
+        <!-- Explorer -->
+        <div class="card" style="padding: 24px; display: flex; flex-direction: column; gap: 16px; border: 1.5px solid var(--primary); position: relative;">
+          <div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--primary); color: #fff; font-size: 10.5px; font-weight: 700; padding: 3px 12px; border-radius: 20px; white-space: nowrap; letter-spacing: 0.04em;">⭐ Recommended</div>
+          <div>
+            <div style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--primary); margin-bottom: 6px;">Karma Explorer</div>
+            <div style="font-size: 22px; font-weight: 800; color: var(--text-primary);">₹674 <span style="font-size: 13px; font-weight: 500; color: var(--text-muted);">• One-Time Payment • Lifetime Access</span></div>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 10px; line-height: 1.6;">Unlock Krishnaite Explorer forever with a single payment. No monthly fees. No renewals.</p>
+          </div>
+          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Includes Everything in Free, plus</div>
+          <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--text-secondary);">
+            <li style="display:flex;gap:8px;align-items:flex-start;"><i data-lucide="check" style="width:14px;height:14px;color:var(--primary);flex-shrink:0;margin-top:2px;"></i> Lifetime access to the Explorer Community</li>
+            <li style="display:flex;gap:8px;align-items:flex-start;"><i data-lucide="check" style="width:14px;height:14px;color:var(--primary);flex-shrink:0;margin-top:2px;"></i> Complete project boilerplates</li>
+            <li style="display:flex;gap:8px;align-items:flex-start;"><i data-lucide="check" style="width:14px;height:14px;color:var(--primary);flex-shrink:0;margin-top:2px;"></i> Advanced Markdown parser and compiler tutorials</li>
+            <li style="display:flex;gap:8px;align-items:flex-start;"><i data-lucide="check" style="width:14px;height:14px;color:var(--primary);flex-shrink:0;margin-top:2px;"></i> Exclusive developer resources</li>
+            <li style="display:flex;gap:8px;align-items:flex-start;"><i data-lucide="check" style="width:14px;height:14px;color:var(--primary);flex-shrink:0;margin-top:2px;"></i> Explorer member badge</li>
+            <li style="display:flex;gap:8px;align-items:flex-start;"><i data-lucide="check" style="width:14px;height:14px;color:var(--primary);flex-shrink:0;margin-top:2px;"></i> Future Explorer content updates included</li>
+          </ul>
+          <div style="margin-top: auto;">
+            <button class="upgrade-btn" onclick="simulateUpgrade('comm-explorer')">Unlock Lifetime Access</button>
+          </div>
+        </div>
+
+        <!-- Pro -->
+        <div class="card" style="padding: 24px; display: flex; flex-direction: column; gap: 16px; border: 1.5px solid var(--border);">
+          <div>
+            <div style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 6px;">KrishnaKarma Pro</div>
+            <div style="font-size: 22px; font-weight: 800; color: var(--text-primary);">₹1,734 <span style="font-size: 13px; font-weight: 500; color: var(--text-muted);">• One-Time Payment • Lifetime Access</span></div>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 10px; line-height: 1.6;">Designed for serious developers who want permanent access to Krishnaite's most advanced learning resources.</p>
+          </div>
+          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Includes Everything in Explorer, plus</div>
+          <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--text-secondary);">
+            <li style="display:flex;gap:8px;align-items:flex-start;"><i data-lucide="check" style="width:14px;height:14px;color:var(--primary);flex-shrink:0;margin-top:2px;"></i> Lifetime access to the Pro Portal</li>
+            <li style="display:flex;gap:8px;align-items:flex-start;"><i data-lucide="check" style="width:14px;height:14px;color:var(--primary);flex-shrink:0;margin-top:2px;"></i> Exclusive live sessions</li>
+            <li style="display:flex;gap:8px;align-items:flex-start;"><i data-lucide="check" style="width:14px;height:14px;color:var(--primary);flex-shrink:0;margin-top:2px;"></i> Advanced Rust concurrency deep-dives</li>
+            <li style="display:flex;gap:8px;align-items:flex-start;"><i data-lucide="check" style="width:14px;height:14px;color:var(--primary);flex-shrink:0;margin-top:2px;"></i> Go Goroutines and systems programming</li>
+            <li style="display:flex;gap:8px;align-items:flex-start;"><i data-lucide="check" style="width:14px;height:14px;color:var(--primary);flex-shrink:0;margin-top:2px;"></i> Custom Vector Index templates</li>
+            <li style="display:flex;gap:8px;align-items:flex-start;"><i data-lucide="check" style="width:14px;height:14px;color:var(--primary);flex-shrink:0;margin-top:2px;"></i> Priority code reviews and technical guidance</li>
+            <li style="display:flex;gap:8px;align-items:flex-start;"><i data-lucide="check" style="width:14px;height:14px;color:var(--primary);flex-shrink:0;margin-top:2px;"></i> Early access to future Pro releases</li>
+            <li style="display:flex;gap:8px;align-items:flex-start;"><i data-lucide="check" style="width:14px;height:14px;color:var(--primary);flex-shrink:0;margin-top:2px;"></i> Permanent Pro Builder badge</li>
+          </ul>
+          <div style="margin-top: auto;">
+            <button class="upgrade-btn" onclick="simulateUpgrade('comm-pro')">Become a Pro Builder</button>
+          </div>
+        </div>
+
       </div>
-      <button class="upgrade-btn" onclick="simulateUpgrade('${viewName}')">
-        Unlock Immediate Access
-      </button>
-      <div style="font-size: 11px; color: var(--text-muted);">
+
+      <div style="font-size: 11px; color: var(--text-muted); margin-top: 20px;">
         (Or switch roles using the tester bar at the bottom right)
       </div>
     </div>
   `;
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
+
 
 async function simulateUpgrade(viewName) {
   const selectedPlan = (viewName === "comm-pro") ? "pro" : "explorer";
